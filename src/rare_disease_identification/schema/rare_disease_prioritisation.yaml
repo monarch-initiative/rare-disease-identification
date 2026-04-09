@@ -1,0 +1,279 @@
+id: https://w3id.org/rare-disease-identification
+name: rare_disease_prioritisation
+title: Rare Disease Prioritisation Schema
+description: >-
+  Schema for prioritised rare diseases for phenotypic characterization.
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  rdid: https://w3id.org/rare-disease-identification/
+  MONDO: http://purl.obolibrary.org/obo/MONDO_
+  HP: http://purl.obolibrary.org/obo/HP_
+
+imports:
+  - linkml:types
+
+default_range: string
+
+enums:
+  PrevalenceCategoryEnum:
+    description: >-
+      Prevalence category indicating whether the disease is low or high prevalence.
+    permissible_values:
+      L:
+        description: Low prevalence
+      H:
+        description: High prevalence
+      H_star:
+        description: High prevalence in some populations
+      H_uncertain:
+        description: Uncertain high prevalence
+
+  PrioritizationCategoryEnum:
+    description: >-
+      Category indicating the prioritization tier for the disease.
+    permissible_values:
+      initial:
+        description: First expert-based prioritisation of diseases with high potential for phenotypic characterization impact
+      expanded:
+        description: Extended set of diseases added after initial expert review to broaden coverage
+
+  SourceTypeEnum:
+    description: Type of evidence source.
+    permissible_values:
+      LITERATURE:
+        description: Published literature
+      DATABASE:
+        description: Database or registry
+      REGULATORY:
+        description: Regulatory agency approval
+
+  ConfidenceEnum:
+    description: Confidence level of the evidence.
+    permissible_values:
+      LOW:
+        description: Low confidence
+      MEDIUM:
+        description: Medium confidence
+      HIGH:
+        description: High confidence
+
+  EvidenceSourceEnum:
+    description: Category of evidence source.
+    permissible_values:
+      HUMAN_CLINICAL:
+        description: Human clinical evidence
+
+classes:
+  SimpleTerm:
+    description: >-
+      A simple ontology term with an identifier and a label.
+    attributes:
+      id:
+        description: The CURIE identifier for the term.
+        range: string
+        identifier: true
+      label:
+        description: The human-readable label for the term.
+        range: string
+
+  RareDiseaseCollection:
+    description: A collection of prioritised rare diseases.
+    tree_root: true
+    attributes:
+      title:
+        description: Title of the collection.
+        range: string
+      description:
+        description: Description of the collection.
+        range: string
+      version:
+        description: Version of the collection.
+        range: string
+      diseases:
+        description: The list of prioritised rare diseases.
+        range: RareDisease
+        multivalued: true
+        inlined_as_list: true
+
+  RareDisease:
+    description: A rare disease entry with prioritisation metadata.
+    attributes:
+      mondo_id:
+        description: The MONDO identifier for the disease.
+        range: string
+        identifier: true
+        pattern: "^MONDO:\\d{7}$"
+      mondo_label:
+        description: The primary disease name as recognised in medical literature.
+        range: string
+        required: true
+      mondo_synonyms:
+        description: Alternative names and terms used to refer to this disease.
+        range: string
+        multivalued: true
+      mondo_categories:
+        description: MONDO disease categories (direct is-a parents).
+        range: SimpleTerm
+        multivalued: true
+        inlined_as_list: true
+      hpo_high_level_categories:
+        description: HPO high-level phenotype categories.
+        range: SimpleTerm
+        multivalued: true
+        inlined_as_list: true
+      histopheno_categories:
+        description: Histopheno phenotype categories.
+        range: string
+        multivalued: true
+      keywords:
+        description: Keywords associated with the disease.
+        range: string
+        multivalued: true
+      ontology_terminology_codes:
+        description: >-
+          Cross-references to other ontology or terminology codes
+          (e.g. OMIM, MEDGEN, UMLS).
+        range: string
+        multivalued: true
+      prevalence_category:
+        description: >-
+          Prevalence category: L (low), H (high), H* (high in some populations).
+        range: PrevalenceCategoryEnum
+      misdiagnosis_bias:
+        description: >-
+          Factors contributing to under- or mis-diagnosis, including
+          potential demographic biases.
+        range: string
+      prevalence_per_100k_us:
+        description: >-
+          Disease prevalence per 100,000 people in the United States
+          as reported in the literature.
+        range: float
+      prioritization_category:
+        description: The prioritization tier for data collection effort.
+        range: PrioritizationCategoryEnum
+      justification_summary:
+        description: >-
+          Summary of justification for prioritization and potential for impact.
+        range: string
+        multivalued: true
+      additional_justification:
+        description: Additional justification detail.
+        range: string
+      hpo_treatment_rank:
+        description: >-
+          HPO profile and treatment-based rank score.
+        range: float
+      curated_hpo_profiles:
+        description: Justification grouping based on curated HPO profiles.
+        range: SimpleTerm
+        multivalued: true
+        inlined_as_list: true
+      mondo_category_body_system:
+        description: >-
+          MONDO high-level category: of body system or component.
+        range: SimpleTerm
+        multivalued: true
+        inlined_as_list: true
+      mondo_category_developmental:
+        description: >-
+          MONDO high-level category: of developmental or physiological process.
+        range: SimpleTerm
+        multivalued: true
+        inlined_as_list: true
+      mondo_category_etiologic:
+        description: >-
+          MONDO high-level category: of etiologic mechanism.
+        range: SimpleTerm
+        multivalued: true
+        inlined_as_list: true
+      mondo_category_genetic:
+        description: >-
+          MONDO high-level category: of genetic or genomic mechanism.
+        range: SimpleTerm
+        multivalued: true
+        inlined_as_list: true
+      mondo_category_extrinsic:
+        description: >-
+          MONDO high-level category: of primarily extrinsic mechanism.
+        range: SimpleTerm
+        multivalued: true
+        inlined_as_list: true
+      mondo_category_molecular:
+        description: >-
+          MONDO high-level category: of molecular mechanism.
+        range: SimpleTerm
+        multivalued: true
+        inlined_as_list: true
+      indications:
+        description: Approved drug indications for this disease.
+        range: DrugIndication
+        multivalued: true
+        inlined_as_list: true
+      research:
+        description: Drug/treatment research entries for this disease.
+        range: DrugResearch
+        multivalued: true
+        inlined_as_list: true
+
+  DrugIndication:
+    description: An approved drug indication for a disease.
+    attributes:
+      drug_label:
+        description: Name or label of the approved drug.
+        range: string
+        required: true
+      drug_id:
+        description: Identifier for the drug (e.g. DRUGBANK ID).
+        range: string
+      evidence:
+        description: Regulatory evidence for this indication.
+        range: RegulatoryEvidence
+        multivalued: true
+        inlined_as_list: true
+
+  RegulatoryEvidence:
+    description: Regulatory evidence for a drug indication.
+    attributes:
+      source_type:
+        description: Type of evidence source.
+        range: SourceTypeEnum
+      jurisdiction:
+        description: Regulatory jurisdiction (e.g. US, EU).
+        range: string
+      explanation:
+        description: Explanation of the regulatory evidence.
+        range: string
+
+  DrugResearch:
+    description: A drug or treatment research entry for a disease.
+    attributes:
+      drug_label:
+        description: Name or label of the drug or treatment.
+        range: string
+        required: true
+      evidence:
+        description: Evidence entries supporting this drug/treatment.
+        range: Evidence
+        multivalued: true
+        inlined_as_list: true
+
+  Evidence:
+    description: A single piece of evidence for a drug or treatment.
+    attributes:
+      source_type:
+        description: Type of evidence source (literature, database).
+        range: SourceTypeEnum
+      reference:
+        description: Reference identifier (PMID, PMC, URL, etc.).
+        range: string
+      interpreted_text:
+        description: Interpreted summary of the evidence.
+        range: string
+      confidence:
+        description: Confidence level of the evidence.
+        range: ConfidenceEnum
+      evidence_source:
+        description: Category of the evidence source.
+        range: EvidenceSourceEnum

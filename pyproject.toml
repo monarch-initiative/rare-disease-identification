@@ -1,0 +1,19 @@
+[project]
+name = "rare-disease-identification"
+version = "0.1.0"
+description = "Enabling early identification of rare diseases with AI"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "linkml>=1.10",
+    "linkml-runtime>=1.10",
+    "openpyxl",
+    "pyyaml",
+    "click",
+    "oaklib>=0.6.23",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[dependency-groups]
+dev = []
