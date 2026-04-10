@@ -294,11 +294,21 @@
         var hasIndications = d.indications && d.indications.length > 0;
         var hasResearch = d.research && d.research.length > 0;
 
+        var hl = searchQuery ? function (t) { return highlightText(t, searchQuery); } : esc;
+        var matched = findMatchedFields(d, searchQuery);
+
         var html = '<div class="disease-card">';
+
+        // Match indicator
+        if (matched.length > 0) {
+            var firstMatch = matched[0];
+            html += '<div class="match-indicator">Matched on <strong>' + esc(firstMatch.field) + '</strong>: ' +
+                highlightText(truncate(firstMatch.value, 80), searchQuery) + '</div>';
+        }
 
         // Header
         html += '<div class="card-header"><div>';
-        html += '<h3>' + esc(d.mondo_label) + '</h3>';
+        html += '<h3>' + hl(d.mondo_label) + '</h3>';
         html += '<span class="mondo-id">' + renderCurieLink(d.mondo_id) + '</span>';
         html += '</div></div>';
 
@@ -324,7 +334,7 @@
 
         if (d.mondo_synonyms && d.mondo_synonyms.length > 0) {
             var syns = d.mondo_synonyms.slice(0, 6);
-            html += '<div class="synonyms">Also known as: ' + esc(syns.join(", "));
+            html += '<div class="synonyms">Also known as: ' + syns.map(hl).join(", ");
             if (d.mondo_synonyms.length > 6) html += ", ...";
             html += '</div>';
         }
@@ -397,17 +407,17 @@
         }
         if (d.misdiagnosis_bias) {
             html += '<div class="detail-row full-width"><strong>Diagnosis Bias:</strong> ' +
-                esc(d.misdiagnosis_bias) + '</div>';
+                hl(d.misdiagnosis_bias) + '</div>';
         }
         if (d.justification_summary && d.justification_summary.length > 0) {
             var j = Array.isArray(d.justification_summary) ?
                 d.justification_summary.join(", ") : d.justification_summary;
             html += '<div class="detail-row full-width"><strong>Justification:</strong> ' +
-                esc(j) + '</div>';
+                hl(j) + '</div>';
         }
         if (d.additional_justification) {
             html += '<div class="detail-row full-width"><strong>Additional Detail:</strong> ' +
-                esc(truncate(d.additional_justification, 200)) + '</div>';
+                highlightText(truncate(d.additional_justification, 200), searchQuery) + '</div>';
         }
         html += '</div>'; // detail-grid
 
@@ -550,6 +560,43 @@
     }
 
     // -- Helpers --
+
+    function highlightText(text, query) {
+        if (!query || !text) return esc(text);
+        var escaped = esc(text);
+        var lc = escaped.toLowerCase();
+        var idx = lc.indexOf(query.toLowerCase());
+        if (idx === -1) return escaped;
+        return escaped.substring(0, idx) +
+            '<mark class="search-match">' + escaped.substring(idx, idx + query.length) + '</mark>' +
+            escaped.substring(idx + query.length);
+    }
+
+    function findMatchedFields(d, query) {
+        if (!query) return [];
+        var q = query.toLowerCase();
+        var matches = [];
+        var fields = [
+            ["Name", d.mondo_label],
+            ["ID", d.mondo_id],
+            ["Synonym", (d.mondo_synonyms || []).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
+            ["Keyword", (d.keywords || []).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
+            ["Disease Type", (d.mondo_categories || []).map(function (t) { return t.label || ""; }).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
+            ["Disease Type ID", (d.mondo_categories || []).map(function (t) { return t.id || ""; }).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
+            ["Phenotype Area", (d.hpo_high_level_categories || []).map(function (t) { return t.label || ""; }).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
+            ["Cross-reference", (d.ontology_terminology_codes || []).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
+            ["Diagnosis Bias", d.misdiagnosis_bias],
+            ["Justification", (d.justification_summary || []).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
+            ["Additional Detail", d.additional_justification],
+        ];
+        fields.forEach(function (pair) {
+            var val = pair[1];
+            if (val && String(val).toLowerCase().indexOf(q) !== -1) {
+                matches.push({ field: pair[0], value: String(val) });
+            }
+        });
+        return matches;
+    }
 
     function renderTooltipTag(label, tip, cls) {
         if (tip) {
