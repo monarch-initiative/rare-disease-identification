@@ -1,0 +1,133 @@
+id: https://w3id.org/rare-disease-identification/mondo_drugs
+name: mondo_drugs
+title: Mondo Drugs Report Schema
+description: >-
+  Disease-centric aggregation of drug associations from the MeDIC knowledge base.
+  Each disease record collects indications, contraindications, adverse events, and
+  research associations.
+
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  rdid: https://w3id.org/rare-disease-identification/
+  CHEBI: http://purl.obolibrary.org/obo/CHEBI_
+  MONDO: http://purl.obolibrary.org/obo/MONDO_
+
+default_prefix: rdid
+
+classes:
+  EvidenceItem:
+    description: >-
+      A single piece of evidence supporting or refuting a drug-disease association.
+    attributes:
+      source_type:
+        range: string
+        description: Type of source (REGULATORY, LITERATURE, GUIDELINE, DATABASE, POST_MARKET)
+      jurisdiction:
+        range: string
+        description: Regulatory jurisdiction (USA, EU, JAPAN, INDIA, RUSSIA, CHINA, INTERNATIONAL)
+      reference:
+        range: string
+        description: >-
+          Reference identifier (PMID:12345, DailyMed:xxx, NCT:xxx, or URL)
+      reference_title:
+        range: string
+        description: Title of the referenced document
+      snippet:
+        range: string
+        description: Exact quote from the source document
+      explanation:
+        range: string
+        description: How this evidence supports or refutes the drug-disease association
+      support:
+        range: string
+        description: Whether evidence supports or refutes (SUPPORT, REFUTE, PARTIAL, NO_EVIDENCE)
+      confidence:
+        range: string
+        description: Confidence level (HIGH, MEDIUM, LOW)
+      evidence_source:
+        range: string
+        description: Provenance (HUMAN_CLINICAL, MODEL_ORGANISM, IN_VITRO, COMPUTATIONAL, OTHER)
+      approval_status:
+        range: string
+        description: Clinical approval status (APPROVED, INVESTIGATIONAL, WITHDRAWN, DISCONTINUED, OFF_LABEL)
+      max_research_phase:
+        range: string
+        description: Maximum research phase (PRE_CLINICAL, PHASE_I-IV, CASE_REPORT, IN_VITRO, COMPUTATIONAL)
+
+  DrugAssociation:
+    description: >-
+      A drug associated with a disease in a specific modality, carrying evidence.
+    attributes:
+      drug_id:
+        range: string
+        description: >-
+          Normalized drug identifier (CHEBI CURIE preferred).
+          May be empty for ungrounded drugs.
+      drug_label:
+        range: string
+        required: true
+        description: Drug name or label
+      evidence:
+        range: EvidenceItem
+        multivalued: true
+        inlined_as_list: true
+        description: Evidence items supporting this association
+
+  DiseaseRecord:
+    description: >-
+      A disease with all known drug associations across modalities.
+    attributes:
+      disease_id:
+        range: string
+        required: true
+        description: Mondo disease CURIE (e.g. MONDO:0012454)
+      disease_label:
+        range: string
+        required: true
+        description: Human-readable disease name
+      indications:
+        range: DrugAssociation
+        multivalued: true
+        inlined_as_list: true
+        description: Drugs indicated for this disease
+      contraindications:
+        range: DrugAssociation
+        multivalued: true
+        inlined_as_list: true
+        description: Drugs contraindicated for this disease
+      adverse_events:
+        range: DrugAssociation
+        multivalued: true
+        inlined_as_list: true
+        description: Drugs with reported adverse events relevant to this disease
+      research:
+        range: DrugAssociation
+        multivalued: true
+        inlined_as_list: true
+        description: Drug-disease associations from literature research
+
+  MondoDrugsReport:
+    description: >-
+      Top-level report aggregating all disease-drug associations.
+    tree_root: true
+    attributes:
+      id:
+        range: string
+        required: true
+        description: Report identifier
+      title:
+        range: string
+        required: true
+        description: Report title
+      date_created:
+        range: string
+        required: true
+        description: ISO 8601 date when this report was generated
+      diseases:
+        range: DiseaseRecord
+        multivalued: true
+        inlined_as_list: true
+        description: All disease records in the report
