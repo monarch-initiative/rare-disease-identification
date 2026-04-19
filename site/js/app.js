@@ -619,7 +619,7 @@
 
         // Feedback form (hidden by default)
         html += '<div class="feedback-form" id="' + feedbackId + '" ' +
-            'data-context="' + esc(JSON.stringify(context)) + '">';
+            'data-context="' + escAttr(JSON.stringify(context)) + '">';
         html += '<textarea class="feedback-text" placeholder="Describe what is wrong with this evidence (optional)..." rows="2"></textarea>';
         html += '<div class="feedback-actions">';
         html += '<button class="feedback-submit" data-feedback-id="' + feedbackId + '">Open Issue on GitHub</button>';
@@ -730,6 +730,11 @@
         var el = document.createElement("span");
         el.textContent = s;
         return el.innerHTML;
+    }
+
+    function escAttr(s) {
+        if (!s) return "";
+        return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
     function truncate(s, max) {
@@ -844,10 +849,9 @@
             var ctx = JSON.parse(el.getAttribute("data-context"));
             var userComment = el.querySelector(".feedback-text").value.trim();
 
-            var title = "[Evidence Feedback] " + ctx.drug_label + " / " + ctx.disease_label;
-            if (ctx.source) title += " \u2014 " + ctx.source;
+            var title = "[Incorrect Evidence] " + ctx.drug_label + " / " + ctx.disease_label;
 
-            var body = "## Evidence Feedback\n\n";
+            var body = "## Incorrect Evidence Report\n\nThe following evidence record appears to be **incorrect or misleading** and should be reviewed.\n\n";
             body += "| Field | Value |\n|---|---|\n";
             body += "| Disease | " + ctx.disease_label + " (`" + ctx.disease_id + "`) |\n";
             body += "| Drug | " + ctx.drug_label + (ctx.drug_id ? " (`" + ctx.drug_id + "`)" : "") + " |\n";
