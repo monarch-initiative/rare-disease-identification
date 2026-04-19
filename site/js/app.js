@@ -564,7 +564,7 @@
 
         // Feedback button
         var feedbackId = "fb-" + Math.random().toString(36).slice(2, 10);
-        html += '<button class="feedback-btn" onclick="openFeedback(\'' + feedbackId + '\')" title="Report issue with this evidence">';
+        html += '<button class="feedback-btn" data-feedback-id="' + feedbackId + '" title="Report issue with this evidence">';
         html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
             '<path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>' +
             '</svg>';
@@ -618,12 +618,12 @@
         }
 
         // Feedback form (hidden by default)
-        html += '<div class="feedback-form" id="' + feedbackId + '">';
+        html += '<div class="feedback-form" id="' + feedbackId + '" ' +
+            'data-context="' + esc(JSON.stringify(context)) + '">';
         html += '<textarea class="feedback-text" placeholder="Describe what is wrong with this evidence (optional)..." rows="2"></textarea>';
         html += '<div class="feedback-actions">';
-        html += '<button class="feedback-submit" onclick="submitFeedback(\'' + feedbackId + '\', ' +
-            JSON.stringify(JSON.stringify(context)) + ')">Open Issue on GitHub</button>';
-        html += '<button class="feedback-cancel" onclick="closeFeedback(\'' + feedbackId + '\')">Cancel</button>';
+        html += '<button class="feedback-submit" data-feedback-id="' + feedbackId + '">Open Issue on GitHub</button>';
+        html += '<button class="feedback-cancel" data-feedback-id="' + feedbackId + '">Cancel</button>';
         html += '</div></div>';
 
         html += '</div>'; // evidence-card
@@ -815,47 +815,63 @@
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    window.openFeedback = function (id) {
-        var el = document.getElementById(id);
-        if (el) el.classList.toggle("open");
-    };
-
-    window.closeFeedback = function (id) {
-        var el = document.getElementById(id);
-        if (el) el.classList.remove("open");
-    };
-
-    window.submitFeedback = function (id, contextJson) {
-        var el = document.getElementById(id);
-        var ctx = JSON.parse(contextJson);
-        var userComment = el.querySelector(".feedback-text").value.trim();
-
-        var title = "[Evidence Feedback] " + ctx.drug_label + " / " + ctx.disease_label;
-        if (ctx.source) title += " — " + ctx.source;
-
-        var body = "## Evidence Feedback\n\n";
-        body += "| Field | Value |\n|---|---|\n";
-        body += "| Disease | " + ctx.disease_label + " (`" + ctx.disease_id + "`) |\n";
-        body += "| Drug | " + ctx.drug_label + (ctx.drug_id ? " (`" + ctx.drug_id + "`)" : "") + " |\n";
-        body += "| Section | " + ctx.section + " |\n";
-        if (ctx.source) body += "| Source | " + ctx.source + " |\n";
-        if (ctx.reference) body += "| Reference | " + ctx.reference + " |\n";
-        body += "\n";
-
-        if (userComment) {
-            body += "## Comment\n\n" + userComment + "\n\n";
+    // -- Feedback event delegation --
+    document.addEventListener("click", function (e) {
+        // Toggle feedback form open
+        var fbBtn = e.target.closest(".feedback-btn");
+        if (fbBtn) {
+            var id = fbBtn.getAttribute("data-feedback-id");
+            var el = document.getElementById(id);
+            if (el) el.classList.toggle("open");
+            return;
         }
 
-        body += "---\n*Filed from the [Rare Disease Identification site](https://monarch-initiative.github.io/rare-disease-identification/)*";
+        // Cancel feedback
+        var cancelBtn = e.target.closest(".feedback-cancel");
+        if (cancelBtn) {
+            var id = cancelBtn.getAttribute("data-feedback-id");
+            var el = document.getElementById(id);
+            if (el) el.classList.remove("open");
+            return;
+        }
 
-        var url = "https://github.com/" + FEEDBACK_REPO + "/issues/new?" +
-            "title=" + encodeURIComponent(title) +
-            "&body=" + encodeURIComponent(body) +
-            "&labels=" + encodeURIComponent("evidence-feedback");
+        // Submit feedback
+        var submitBtn = e.target.closest(".feedback-submit");
+        if (submitBtn) {
+            var id = submitBtn.getAttribute("data-feedback-id");
+            var el = document.getElementById(id);
+            if (!el) return;
+            var ctx = JSON.parse(el.getAttribute("data-context"));
+            var userComment = el.querySelector(".feedback-text").value.trim();
 
-        window.open(url, "_blank");
-        el.classList.remove("open");
-    };
+            var title = "[Evidence Feedback] " + ctx.drug_label + " / " + ctx.disease_label;
+            if (ctx.source) title += " \u2014 " + ctx.source;
+
+            var body = "## Evidence Feedback\n\n";
+            body += "| Field | Value |\n|---|---|\n";
+            body += "| Disease | " + ctx.disease_label + " (`" + ctx.disease_id + "`) |\n";
+            body += "| Drug | " + ctx.drug_label + (ctx.drug_id ? " (`" + ctx.drug_id + "`)" : "") + " |\n";
+            body += "| Section | " + ctx.section + " |\n";
+            if (ctx.source) body += "| Source | " + ctx.source + " |\n";
+            if (ctx.reference) body += "| Reference | " + ctx.reference + " |\n";
+            body += "\n";
+
+            if (userComment) {
+                body += "## Comment\n\n" + userComment + "\n\n";
+            }
+
+            body += "---\n*Filed from the [Rare Disease Identification site](https://monarch-initiative.github.io/rare-disease-identification/)*";
+
+            var url = "https://github.com/" + FEEDBACK_REPO + "/issues/new?" +
+                "title=" + encodeURIComponent(title) +
+                "&body=" + encodeURIComponent(body) +
+                "&labels=" + encodeURIComponent("evidence-feedback");
+
+            window.open(url, "_blank");
+            el.classList.remove("open");
+            return;
+        }
+    });
 
     // -- Init --
     setupSearch();
