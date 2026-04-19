@@ -4,6 +4,7 @@
     var DATA_URL = "data/prioritised-rare-disease-list.yml";
     var EPM_URL = "obo.epm.json";
     var PAGE_SIZE = 25;
+    var FEEDBACK_REPO = "monarch-initiative/rare-disease-identification";
 
     var allDiseases = [];
     var filtered = [];
@@ -441,18 +442,21 @@
 
         html += '</div>'; // card-body
 
+        // Disease context for feedback
+        var diseaseCtx = { disease_id: d.mondo_id, disease_label: d.mondo_label };
+
         // Approved indications section
         if (hasIndications) {
             html += renderCollapsibleSection("indications", d.indications,
                 "Approved Indications (" + d.indications.length + ")",
-                renderIndicationEntry);
+                renderIndicationEntry, diseaseCtx);
         }
 
         // Research section
         if (hasResearch) {
             html += renderCollapsibleSection("research", d.research,
                 "Treatment Research (" + d.research.length + " entries)",
-                renderResearchEntry);
+                renderResearchEntry, diseaseCtx);
         }
 
         html += '</div>'; // disease-card
@@ -489,19 +493,144 @@
 
     // -- Collapsible sections --
 
-    function renderCollapsibleSection(type, items, title, renderFn) {
+    function renderCollapsibleSection(type, items, title, renderFn, diseaseCtx) {
         var id = type + "-" + Math.random().toString(36).slice(2, 8);
         var html = '<div class="card-section">';
         html += '<button class="section-toggle" onclick="toggleSection(\'' + id + '\', this)">';
         html += '<span class="arrow">&#9654;</span> ' + title;
         html += '</button>';
         html += '<div class="section-content" id="' + id + '">';
-        items.forEach(function (item) { html += renderFn(item); });
+        items.forEach(function (item, idx, arr) { html += renderFn(item, idx, arr, diseaseCtx); });
         html += '</div></div>';
         return html;
     }
 
-    function renderIndicationEntry(ind) {
+    function renderEvidenceCard(e, context) {
+        var html = '<div class="evidence-card">';
+
+        // Top row: source, jurisdiction, approval, confidence, feedback button
+        html += '<div class="evidence-top-row">';
+        html += '<div class="evidence-top-left">';
+
+        // Source badge
+        var sourceType = (e.source && e.source.type) || e.source_type || "";
+        var sourceName = (e.source && e.source.name) || sourceType || "";
+        if (sourceName) {
+            var badgeClass = sourceType ? sourceType.toLowerCase() : "unknown";
+            html += '<span class="evidence-badge ' + badgeClass + '">' + esc(sourceName) + '</span>';
+        }
+
+        // Jurisdiction
+        var jurisdiction = (e.source && e.source.jurisdiction) || e.jurisdiction || "";
+        if (jurisdiction) {
+            html += '<span class="evidence-jurisdiction">' + esc(jurisdiction) + '</span>';
+        }
+
+        // Approval status
+        if (e.approval_status) {
+            var statusClass = e.approval_status.toLowerCase().replace(/[^a-z]/g, "_");
+            html += '<span class="approval-badge ' + statusClass + '">' + esc(e.approval_status) + '</span>';
+        }
+
+        // Max research phase
+        if (e.max_research_phase) {
+            html += '<span class="phase-badge">' + esc(e.max_research_phase.replace(/_/g, " ")) + '</span>';
+        }
+
+        // Evidence source (HUMAN_CLINICAL, etc.)
+        if (e.evidence_source) {
+            html += '<span class="evidence-source-badge">' + esc(e.evidence_source.replace(/_/g, " ")) + '</span>';
+        }
+
+        // Confidence indicators
+        var confDrug = e.confidence_drug || e.confidence || "";
+        var confDisease = e.confidence_disease || e.confidence || "";
+        var confAssoc = e.confidence_association || e.confidence || "";
+        if (confDrug || confDisease || confAssoc) {
+            html += '<span class="confidence-group">';
+            if (confDrug) html += '<span class="conf-dot ' + confDrug.toLowerCase() + '" title="Drug confidence: ' + esc(confDrug) + '">D</span>';
+            if (confDisease) html += '<span class="conf-dot ' + confDisease.toLowerCase() + '" title="Disease confidence: ' + esc(confDisease) + '">Dx</span>';
+            if (confAssoc) html += '<span class="conf-dot ' + confAssoc.toLowerCase() + '" title="Association confidence: ' + esc(confAssoc) + '">A</span>';
+            html += '</span>';
+        }
+
+        // Support indicator
+        if (e.support) {
+            var supportClass = e.support.toLowerCase().replace(/[^a-z]/g, "_");
+            html += '<span class="support-badge ' + supportClass + '">' + esc(e.support) + '</span>';
+        }
+
+        html += '</div>'; // evidence-top-left
+
+        // Feedback button
+        var feedbackId = "fb-" + Math.random().toString(36).slice(2, 10);
+        html += '<button class="feedback-btn" onclick="openFeedback(\'' + feedbackId + '\')" title="Report issue with this evidence">';
+        html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>' +
+            '</svg>';
+        html += '</button>';
+
+        html += '</div>'; // evidence-top-row
+
+        // Reference line
+        if (e.reference || e.reference_title) {
+            html += '<div class="evidence-ref-line">';
+            if (e.reference) {
+                html += '<span class="evidence-ref">' + renderRefLink(e.reference) + '</span>';
+            }
+            if (e.reference_title) {
+                html += '<span class="evidence-ref-title">' + esc(e.reference_title) + '</span>';
+            }
+            html += '</div>';
+        }
+
+        // Source description
+        if (e.source && e.source.description) {
+            html += '<div class="evidence-source-desc">' + esc(e.source.description) + '</div>';
+        }
+
+        // Source URL
+        if (e.source && e.source.url) {
+            html += '<div class="evidence-source-url"><a href="' + esc(e.source.url) + '" target="_blank" rel="noopener">' + esc(truncate(e.source.url, 80)) + '</a></div>';
+        }
+
+        // Snippet
+        if (e.snippet) {
+            html += '<div class="evidence-snippet">' + esc(e.snippet) + '</div>';
+        }
+
+        // Explanation / interpreted_text
+        var explanation = e.explanation || e.interpreted_text || "";
+        if (explanation) {
+            html += '<div class="evidence-explanation">' + esc(explanation) + '</div>';
+        }
+
+        // Curator
+        if (e.curator) {
+            var curatorName = (typeof e.curator === "string") ? e.curator : (e.curator.name || "");
+            var curatorType = (typeof e.curator === "object") ? (e.curator.curator_type || "") : "";
+            if (curatorName) {
+                html += '<div class="evidence-curator">';
+                if (curatorType) html += '<span class="curator-type">' + esc(curatorType.replace(/_/g, " ")) + '</span>';
+                html += esc(curatorName);
+                html += '</div>';
+            }
+        }
+
+        // Feedback form (hidden by default)
+        html += '<div class="feedback-form" id="' + feedbackId + '">';
+        html += '<textarea class="feedback-text" placeholder="Describe what is wrong with this evidence (optional)..." rows="2"></textarea>';
+        html += '<div class="feedback-actions">';
+        html += '<button class="feedback-submit" onclick="submitFeedback(\'' + feedbackId + '\', ' +
+            JSON.stringify(JSON.stringify(context)) + ')">Open Issue on GitHub</button>';
+        html += '<button class="feedback-cancel" onclick="closeFeedback(\'' + feedbackId + '\')">Cancel</button>';
+        html += '</div></div>';
+
+        html += '</div>'; // evidence-card
+        return html;
+    }
+
+    function renderIndicationEntry(ind, _idx, _arr, diseaseCtx) {
         var html = '<div class="drug-entry">';
         html += '<div class="drug-header">';
         html += '<span class="drug-name">' + esc(ind.drug_label) + '</span>';
@@ -510,50 +639,40 @@
         }
         html += '</div>';
         (ind.evidence || []).forEach(function (e) {
-            html += '<div class="evidence-item">';
-            html += '<div class="evidence-meta">';
-            if (e.source_type) {
-                html += '<span class="evidence-badge ' + e.source_type.toLowerCase() + '">' +
-                    esc(e.source_type) + '</span>';
-            }
-            if (e.jurisdiction) {
-                html += '<span class="jurisdiction">Jurisdiction: <strong>' +
-                    esc(e.jurisdiction) + '</strong></span>';
-            }
-            html += '</div>';
-            if (e.explanation) {
-                html += '<div class="evidence-text">' + esc(e.explanation) + '</div>';
-            }
-            html += '</div>';
+            var context = {
+                disease_id: diseaseCtx.disease_id,
+                disease_label: diseaseCtx.disease_label,
+                drug_label: ind.drug_label,
+                drug_id: ind.drug_id || "",
+                section: "indication",
+                source: (e.source && e.source.name) || e.source_type || "",
+                reference: e.reference || "",
+            };
+            html += renderEvidenceCard(e, context);
         });
         html += '</div>';
         return html;
     }
 
-    function renderResearchEntry(r) {
+    function renderResearchEntry(r, _idx, _arr, diseaseCtx) {
         var html = '<div class="drug-entry">';
         html += '<div class="drug-header">';
         html += '<span class="drug-name">' + esc(r.drug_label) + '</span>';
+        if (r.drug_id) {
+            html += ' ' + renderCurieLink(r.drug_id);
+        }
         html += '</div>';
         (r.evidence || []).forEach(function (e) {
-            html += '<div class="evidence-item">';
-            html += '<div class="evidence-meta">';
-            if (e.source_type) {
-                html += '<span class="evidence-badge ' + e.source_type.toLowerCase() + '">' +
-                    esc(e.source_type) + '</span>';
-            }
-            if (e.confidence) {
-                html += '<span class="confidence-badge ' + e.confidence.toLowerCase() + '">' +
-                    esc(e.confidence) + '</span>';
-            }
-            if (e.reference) {
-                html += '<span class="evidence-ref">' + renderRefLink(e.reference) + '</span>';
-            }
-            html += '</div>';
-            if (e.interpreted_text) {
-                html += '<div class="evidence-text">' + esc(truncate(e.interpreted_text, 300)) + '</div>';
-            }
-            html += '</div>';
+            var context = {
+                disease_id: diseaseCtx.disease_id,
+                disease_label: diseaseCtx.disease_label,
+                drug_label: r.drug_label,
+                drug_id: r.drug_id || "",
+                section: "research",
+                source: (e.source && e.source.name) || e.source_type || "",
+                reference: e.reference || "",
+            };
+            html += renderEvidenceCard(e, context);
         });
         html += '</div>';
         return html;
@@ -694,6 +813,48 @@
         currentPage = n;
         render();
         window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    window.openFeedback = function (id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.toggle("open");
+    };
+
+    window.closeFeedback = function (id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.remove("open");
+    };
+
+    window.submitFeedback = function (id, contextJson) {
+        var el = document.getElementById(id);
+        var ctx = JSON.parse(contextJson);
+        var userComment = el.querySelector(".feedback-text").value.trim();
+
+        var title = "[Evidence Feedback] " + ctx.drug_label + " / " + ctx.disease_label;
+        if (ctx.source) title += " — " + ctx.source;
+
+        var body = "## Evidence Feedback\n\n";
+        body += "| Field | Value |\n|---|---|\n";
+        body += "| Disease | " + ctx.disease_label + " (`" + ctx.disease_id + "`) |\n";
+        body += "| Drug | " + ctx.drug_label + (ctx.drug_id ? " (`" + ctx.drug_id + "`)" : "") + " |\n";
+        body += "| Section | " + ctx.section + " |\n";
+        if (ctx.source) body += "| Source | " + ctx.source + " |\n";
+        if (ctx.reference) body += "| Reference | " + ctx.reference + " |\n";
+        body += "\n";
+
+        if (userComment) {
+            body += "## Comment\n\n" + userComment + "\n\n";
+        }
+
+        body += "---\n*Filed from the [Rare Disease Identification site](https://monarch-initiative.github.io/rare-disease-identification/)*";
+
+        var url = "https://github.com/" + FEEDBACK_REPO + "/issues/new?" +
+            "title=" + encodeURIComponent(title) +
+            "&body=" + encodeURIComponent(body) +
+            "&labels=" + encodeURIComponent("evidence-feedback");
+
+        window.open(url, "_blank");
+        el.classList.remove("open");
     };
 
     // -- Init --

@@ -2,7 +2,7 @@
 
 SCHEMA := "src/rare_disease_identification/schema/rare_disease_prioritisation.yaml"
 DATAMODEL_DIR := "src/rare_disease_identification/datamodel"
-EXCEL := "data/prioritizing rare diseases for phenotypic characterization.xlsx"
+SOURCE := "src/prioritised-rare-disease-list.yml"
 DRUGS := "data/drugs.yml"
 MEDIC_DIR := "../medic"
 OUTPUT := "prioritised-rare-disease-list.yml"
@@ -10,8 +10,8 @@ OUTPUT := "prioritised-rare-disease-list.yml"
 # Default recipe
 default: all
 
-# Full pipeline: setup, generate datamodel, extract data, build drugs
-all: setup gen-datamodel extract-list build-drugs
+# Full pipeline: setup, generate datamodel, build drugs, merge
+all: setup gen-datamodel build-drugs merge
 
 # Install Python dependencies via uv
 setup:
@@ -24,19 +24,19 @@ gen-datamodel: setup
     uv run gen-python {{SCHEMA}} > {{DATAMODEL_DIR}}/rare_disease_prioritisation.py
     touch {{DATAMODEL_DIR}}/__init__.py
 
-# Extract rare disease list from Excel into YAML, merging treatments
-extract-list: gen-datamodel
-    uv run python -m rare_disease_identification.extract \
-        -i "{{EXCEL}}" \
-        -t "{{DRUGS}}" \
-        -o "{{OUTPUT}}"
-
 # Build drug association report from MeDIC products
 build-drugs:
     uv run python -m rare_disease_identification.build_drugs \
         --medic-dir "{{MEDIC_DIR}}" \
-        --diseases "{{OUTPUT}}" \
+        --diseases "{{SOURCE}}" \
         --output "{{DRUGS}}"
+
+# Merge source disease list with drug data into final output
+merge:
+    uv run python -m rare_disease_identification.merge \
+        -s "{{SOURCE}}" \
+        -d "{{DRUGS}}" \
+        -o "{{OUTPUT}}"
 
 # Serve the site locally for development
 serve:
