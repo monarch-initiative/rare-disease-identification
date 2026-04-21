@@ -515,15 +515,12 @@
         // Source badge
         var sourceType = (e.source && e.source.type) || e.source_type || "";
         var sourceName = (e.source && e.source.name) || sourceType || "";
+        var jurisdiction = (e.source && e.source.jurisdiction) || e.jurisdiction || "";
         if (sourceName) {
             var badgeClass = sourceType ? sourceType.toLowerCase() : "unknown";
-            html += '<span class="evidence-badge ' + badgeClass + '">' + esc(sourceName) + '</span>';
-        }
-
-        // Jurisdiction
-        var jurisdiction = (e.source && e.source.jurisdiction) || e.jurisdiction || "";
-        if (jurisdiction) {
-            html += '<span class="evidence-jurisdiction">' + esc(jurisdiction) + '</span>';
+            var displaySource = sourceName;
+            if (jurisdiction) displaySource += " (" + jurisdiction + ")";
+            html += '<span class="evidence-badge ' + badgeClass + '">' + esc(displaySource) + '</span>';
         }
 
         // Approval status
@@ -548,9 +545,9 @@
         var confAssoc = e.confidence_association || e.confidence || "";
         if (confDrug || confDisease || confAssoc) {
             html += '<span class="confidence-group">';
-            if (confDrug) html += '<span class="conf-dot ' + confDrug.toLowerCase() + '" title="Drug confidence: ' + esc(confDrug) + '">D</span>';
-            if (confDisease) html += '<span class="conf-dot ' + confDisease.toLowerCase() + '" title="Disease confidence: ' + esc(confDisease) + '">Dx</span>';
-            if (confAssoc) html += '<span class="conf-dot ' + confAssoc.toLowerCase() + '" title="Association confidence: ' + esc(confAssoc) + '">A</span>';
+            if (confDrug) html += '<span class="conf-dot tooltip-wrap ' + confDrug.toLowerCase() + '">D<span class="tooltip-text">Drug confidence: ' + esc(confDrug) + '</span></span>';
+            if (confDisease) html += '<span class="conf-dot tooltip-wrap ' + confDisease.toLowerCase() + '">Dx<span class="tooltip-text">Disease confidence: ' + esc(confDisease) + '</span></span>';
+            if (confAssoc) html += '<span class="conf-dot tooltip-wrap ' + confAssoc.toLowerCase() + '">A<span class="tooltip-text">Association confidence: ' + esc(confAssoc) + '</span></span>';
             html += '</span>';
         }
 
