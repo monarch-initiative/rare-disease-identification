@@ -6,6 +6,7 @@ SOURCE := "src/prioritised-rare-disease-list.yml"
 DRUGS := "data/drugs.yml"
 MEDIC_DIR := "../medic"
 OUTPUT := "prioritised-rare-disease-list.yml"
+SUMMARY := "category_summary.yml"
 
 # Default recipe
 default: all
@@ -23,6 +24,12 @@ gen-datamodel: setup
     mkdir -p {{DATAMODEL_DIR}}
     uv run gen-python {{SCHEMA}} > {{DATAMODEL_DIR}}/rare_disease_prioritisation.py
     touch {{DATAMODEL_DIR}}/__init__.py
+
+# Update MONDO category fields via ontology ancestor traversal
+update-categories:
+    uv run python -m rare_disease_identification.update_mondo_categories \
+        --input "{{SOURCE}}" \
+        --summary "{{SUMMARY}}"
 
 # Build drug association report from MeDIC products
 build-drugs:
