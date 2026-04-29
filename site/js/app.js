@@ -149,7 +149,7 @@
             return "no_treatments";
         }, TREATMENT_LABELS);
         buildTopNFilter("filter-category", "category",
-            function (d) { return (d.mondo_categories || []).map(function (t) { return t.label || t; }); }, 15);
+            function (d) { return (d.mondo_category_body_system || []).map(function (t) { return t.label || t; }); }, 15);
         buildTopNFilter("filter-hpo", "hpo",
             function (d) { return (d.hpo_high_level_categories || []).map(function (t) { return t.label || t; }); }, 12);
     }
@@ -237,7 +237,7 @@
             }
 
             if (activeFilters.category.size > 0) {
-                var cats = (d.mondo_categories || []).map(function (t) { return t.label || t; });
+                var cats = (d.mondo_category_body_system || []).map(function (t) { return t.label || t; });
                 if (!cats.some(function (c) { return activeFilters.category.has(c); })) return false;
             }
 
@@ -262,7 +262,7 @@
             d.mondo_label, d.mondo_id,
             ...(d.mondo_synonyms || []),
             ...(d.keywords || []),
-            ...(d.mondo_categories || []).map(function (t) { return (t.label || "") + " " + (t.id || ""); }),
+            ...(d.mondo_category_body_system || []).map(function (t) { return (t.label || "") + " " + (t.id || ""); }),
             ...(d.hpo_high_level_categories || []).map(function (t) { return (t.label || "") + " " + (t.id || ""); }),
             ...(d.ontology_terminology_codes || []),
             d.misdiagnosis_bias || "",
@@ -341,7 +341,7 @@
         }
 
         // Categories — each type in its own labelled section
-        var mondoCats = d.mondo_categories || [];
+        var mondoCats = d.mondo_category_body_system || [];
         var hpoCats = d.hpo_high_level_categories || [];
         var histoCats = d.histopheno_categories || [];
 
@@ -697,8 +697,8 @@
             ["ID", d.mondo_id],
             ["Synonym", (d.mondo_synonyms || []).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
             ["Keyword", (d.keywords || []).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
-            ["Disease Type", (d.mondo_categories || []).map(function (t) { return t.label || ""; }).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
-            ["Disease Type ID", (d.mondo_categories || []).map(function (t) { return t.id || ""; }).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
+            ["Disease Type", (d.mondo_category_body_system || []).map(function (t) { return t.label || ""; }).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
+            ["Disease Type ID", (d.mondo_category_body_system || []).map(function (t) { return t.id || ""; }).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
             ["Phenotype Area", (d.hpo_high_level_categories || []).map(function (t) { return t.label || ""; }).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
             ["Cross-reference", (d.ontology_terminology_codes || []).find(function (s) { return s.toLowerCase().indexOf(q) !== -1; })],
             ["Diagnosis Bias", d.misdiagnosis_bias],
