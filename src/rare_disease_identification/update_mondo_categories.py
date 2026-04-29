@@ -13,6 +13,13 @@ Category roots:
     mondo_category_extrinsic      <- MONDO:7770010
     mondo_category_molecular      <- MONDO:7770011
 
+Requires `mondo.obo` in the working directory. The current bbop-sqlite
+mondo.db.gz is from the March release and is missing the
+"human disease" descendants we care about, so we read the OBO directly.
+Download with:
+
+    curl -L -o mondo.obo https://purl.obolibrary.org/obo/mondo.obo
+
 Usage:
     python -m rare_disease_identification.update_mondo_categories
     python -m rare_disease_identification.update_mondo_categories \\
@@ -20,6 +27,7 @@ Usage:
         --summary summary.yml
 """
 
+import sys
 from collections import Counter
 from pathlib import Path
 from functools import cache
@@ -38,6 +46,8 @@ CATEGORY_ROOTS = {
     "MONDO:7770010": "mondo_category_extrinsic",
     "MONDO:7770011": "mondo_category_molecular",
 }
+
+MONDO_OBO = Path("mondo.obo")
 
 
 class NoAliasDumper(yaml.SafeDumper):
@@ -77,6 +87,15 @@ def main(input_path: Path, output_path: Path, summary_path: Path):
     if output_path is None:
         output_path = input_path
 
+    if not MONDO_OBO.exists():
+        click.echo(
+            f"Error: {MONDO_OBO} not found in the working directory.\n"
+            "Download the latest Mondo release first, e.g.:\n"
+            "  curl -L -o mondo.obo https://purl.obolibrary.org/obo/mondo.obo",
+            err=True,
+        )
+        sys.exit(1)
+
     with open(input_path) as f:
         data = yaml.safe_load(f)
 
@@ -84,13 +103,7 @@ def main(input_path: Path, output_path: Path, summary_path: Path):
     click.echo(f"Loaded {len(diseases)} diseases from {input_path}")
 
     click.echo("Initialising Mondo OAK adapter")
-    adapter = get_adapter("simpleobo:mondo.obo")
-
-    @cache
-    def direct_parents(term_id: str) -> frozenset:
-        return frozenset(
-            obj for _pred, obj in adapter.outgoing_relationships(term_id, predicates=[IS_A])
-        )
+    adapter = get_adapter(f"simpleobo:{MONDO_OBO}")
 
     @cache
     def direct_children(term_id: str) -> frozenset:
@@ -103,15 +116,15 @@ def main(input_path: Path, output_path: Path, summary_path: Path):
         return adapter.label(term_id)
 
     updated: dict[str, int] = {f: 0 for f in CATEGORY_ROOTS.values()}
-    cleared: dict[str, int] = {f: 0 for f in CATEGORY_ROOTS.values()}
-    category_counts: dict[str, Counter] = {f: Counter() for f in CATEGORY_ROOTS.values()}
     no_category: dict[str, int] = {f: 0 for f in CATEGORY_ROOTS.values()}
+    category_counts: dict[str, Counter] = {f: Counter() for f in CATEGORY_ROOTS.values()}
 
     category_children = {root_id: direct_children(root_id) for root_id in CATEGORY_ROOTS.keys()}
 
     for i, disease in enumerate(diseases):
         mondo_id = disease.get("mondo_id", "")
         if not mondo_id:
+            click.echo(f"  Warning: disease at index {i} has no mondo_id, skipping", err=True)
             continue
 
         if (i + 1) % 100 == 0:
@@ -128,18 +141,17 @@ def main(input_path: Path, output_path: Path, summary_path: Path):
             continue
 
         for root_id, field in CATEGORY_ROOTS.items():
-            matching = category_children[root_id].intersection(ancestors)
+            matching = sorted(category_children[root_id].intersection(ancestors))
             if matching:
                 terms = [{"id": t, "label": term_label(t) or ""} for t in matching]
                 for t in matching:
                     category_counts[field][t] += 1
-                if set(matching) != set(t["id"] for t in disease.get(field, [])):
+                if matching != [t.get("id") for t in disease.get(field, [])]:
                     updated[field] += 1
                 disease[field] = terms
             else:
                 if field in disease:
                     del disease[field]
-                    cleared[field] += 1
                 no_category[field] += 1
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -148,7 +160,7 @@ def main(input_path: Path, output_path: Path, summary_path: Path):
 
     click.echo(f"Written to {output_path}")
     for field in CATEGORY_ROOTS.values():
-        click.echo(f"  {field}: {updated[field]} updated, {cleared[field]} cleared")
+        click.echo(f"  {field}: {updated[field]} updated, {no_category[field]} have no category")
 
     if summary_path is not None:
         summary = {}
