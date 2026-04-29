@@ -6,6 +6,10 @@ SOURCE := "src/prioritised-rare-disease-list.yml"
 DRUGS := "data/drugs.yml"
 MEDIC_DIR := "../medic"
 OUTPUT := "prioritised-rare-disease-list.yml"
+SUMMARY := "category_summary.yml"
+TMP_DIR := "tmp"
+MONDO_OBO := TMP_DIR / "mondo.obo"
+MONDO_OBO_URL := "https://purl.obolibrary.org/obo/mondo.obo"
 
 # Default recipe
 default: all
@@ -23,6 +27,18 @@ gen-datamodel: setup
     mkdir -p {{DATAMODEL_DIR}}
     uv run gen-python {{SCHEMA}} > {{DATAMODEL_DIR}}/rare_disease_prioritisation.py
     touch {{DATAMODEL_DIR}}/__init__.py
+
+# Download mondo.obo into the tmp/ directory if it isn't already there
+fetch-mondo:
+    mkdir -p {{TMP_DIR}}
+    test -f {{MONDO_OBO}} || curl -L -o {{MONDO_OBO}} {{MONDO_OBO_URL}}
+
+# Update MONDO category fields via ontology ancestor traversal
+update-categories: fetch-mondo
+    uv run python -m rare_disease_identification.update_mondo_categories \
+        --input "{{SOURCE}}" \
+        --summary "{{SUMMARY}}" \
+        --mondo-obo "{{MONDO_OBO}}"
 
 # Build drug association report from MeDIC products
 build-drugs:
@@ -44,4 +60,4 @@ serve:
 
 # Clean generated files
 clean:
-    rm -rf .venv/ {{DATAMODEL_DIR}} {{OUTPUT}}
+    rm -rf .venv/ {{DATAMODEL_DIR}} {{OUTPUT}} {{TMP_DIR}}
