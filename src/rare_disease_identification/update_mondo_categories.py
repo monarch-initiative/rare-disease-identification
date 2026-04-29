@@ -13,18 +13,17 @@ Category roots:
     mondo_category_extrinsic      <- MONDO:7770010
     mondo_category_molecular      <- MONDO:7770011
 
-Requires `mondo.obo` in the working directory. The current bbop-sqlite
-mondo.db.gz is from the March release and is missing the
-"human disease" descendants we care about, so we read the OBO directly.
-Download with:
+Reads Mondo from a local `mondo.obo` (the bbop-sqlite mondo.db.gz is from
+the March release and is missing the "human disease" descendants we care
+about). The justfile recipe `fetch-mondo` downloads it into `tmp/`.
 
-    curl -L -o mondo.obo https://purl.obolibrary.org/obo/mondo.obo
+Usage (preferred):
+    just update-categories
 
-Usage:
-    python -m rare_disease_identification.update_mondo_categories
+Direct invocation:
     python -m rare_disease_identification.update_mondo_categories \\
         --input src/prioritised-rare-disease-list.yml --output out.yml \\
-        --summary summary.yml
+        --summary summary.yml --mondo-obo tmp/mondo.obo
 """
 
 import sys
@@ -47,7 +46,7 @@ CATEGORY_ROOTS = {
     "MONDO:7770011": "mondo_category_molecular",
 }
 
-MONDO_OBO = Path("mondo.obo")
+DEFAULT_MONDO_OBO = Path("tmp/mondo.obo")
 
 
 class NoAliasDumper(yaml.SafeDumper):
@@ -82,16 +81,22 @@ class NoAliasDumper(yaml.SafeDumper):
     default=None,
     help="Optional path to write a YAML summary of category counts",
 )
-def main(input_path: Path, output_path: Path, summary_path: Path):
+@click.option(
+    "--mondo-obo",
+    "mondo_obo",
+    type=click.Path(path_type=Path),
+    default=DEFAULT_MONDO_OBO,
+    help="Path to a local mondo.obo (run `just fetch-mondo` to download it)",
+)
+def main(input_path: Path, output_path: Path, summary_path: Path, mondo_obo: Path):
     """Update MONDO category fields from ontology ancestor traversal."""
     if output_path is None:
         output_path = input_path
 
-    if not MONDO_OBO.exists():
+    if not mondo_obo.exists():
         click.echo(
-            f"Error: {MONDO_OBO} not found in the working directory.\n"
-            "Download the latest Mondo release first, e.g.:\n"
-            "  curl -L -o mondo.obo https://purl.obolibrary.org/obo/mondo.obo",
+            f"Error: {mondo_obo} not found.\n"
+            "Run `just fetch-mondo` to download it, or pass --mondo-obo PATH.",
             err=True,
         )
         sys.exit(1)
@@ -102,8 +107,8 @@ def main(input_path: Path, output_path: Path, summary_path: Path):
     diseases = data.get("diseases", [])
     click.echo(f"Loaded {len(diseases)} diseases from {input_path}")
 
-    click.echo("Initialising Mondo OAK adapter")
-    adapter = get_adapter(f"simpleobo:{MONDO_OBO}")
+    click.echo(f"Initialising Mondo OAK adapter from {mondo_obo}")
+    adapter = get_adapter(f"simpleobo:{mondo_obo}")
 
     @cache
     def direct_children(term_id: str) -> frozenset:
