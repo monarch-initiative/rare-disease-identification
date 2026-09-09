@@ -5,15 +5,11 @@ Reads MeDIC product YAML files and the priority disease list,
 then aggregates drug associations into a disease-centric view
 for the rare disease identification project.
 
-This script reads from a MeDIC products directory (configurable)
-and the priority disease list extracted by this project.
-
 Usage:
     python -m rare_disease_identification.build_drugs
     python -m rare_disease_identification.build_drugs --medic-dir ../medic
 """
 
-import csv
 import sys
 from collections import defaultdict
 from datetime import date
@@ -28,6 +24,76 @@ class NoAliasDumper(yaml.SafeDumper):
 
     def ignore_aliases(self, data):
         return True
+
+
+# Map of regulatory jurisdiction to a canonical source description used when
+# the MeDIC evidence row only carries `source_type: REGULATORY` and we want to
+# label it with a sensible authority name.
+JURISDICTION_TO_SOURCE: dict[str, dict[str, str]] = {
+    "USA": {
+        "name": "FDA DailyMed",
+        "description": (
+            "Approved indications extracted from FDA DailyMed Structured Product Labels. "
+            "Raw label text is downloaded from DailyMed and disease names are normalised "
+            "to ontology IDs by the MeDIC pipeline."
+        ),
+    },
+    "EU": {
+        "name": "EMA EPAR",
+        "description": (
+            "Approved indications from European Public Assessment Reports (EPARs) "
+            "from the European Medicines Agency."
+        ),
+    },
+    "JAPAN": {
+        "name": "PMDA",
+        "description": (
+            "Approved indications from the Japan Pharmaceuticals and Medical Devices Agency."
+        ),
+    },
+}
+
+
+def normalize_approval_date(value: str | None) -> str | None:
+    """Normalize MeDIC approval dates (often `YYYYMMDD`) to ISO 8601."""
+    if not value:
+        return None
+    s = str(value).strip()
+    if len(s) == 8 and s.isdigit():
+        return f"{s[0:4]}-{s[4:6]}-{s[6:8]}"
+    return s
+
+
+def rewrite_dead_url(url: str) -> str:
+    """Rewrite known-dead MEDIC URL patterns to working equivalents.
+
+    MEDIC currently emits a few search URLs that 404 against the live sites.
+    Rewrite them in-flight so consumers don't see broken links. This is a
+    bandage; the upstream fix lives in MEDIC.
+
+    - EMA  `…/en/search-results?query=…`     → `…/en/medicines?search_api_fulltext=…`
+    - Purple Book `purplebooksearch.fda.gov/results?query=…`
+                                              → `purplebooksearch.fda.gov/?query=…`
+    - PMDA `pmda.go.jp/english/search/search.html?q=…`
+                                              → `pmda.go.jp/PmdaSearch/iyakuSearch/`
+    """
+    if not url:
+        return url
+    if "ema.europa.eu/en/search-results?query=" in url:
+        return url.replace(
+            "ema.europa.eu/en/search-results?query=",
+            "ema.europa.eu/en/medicines?search_api_fulltext=",
+        )
+    if "purplebooksearch.fda.gov/results?query=" in url:
+        return url.replace(
+            "purplebooksearch.fda.gov/results?query=",
+            "purplebooksearch.fda.gov/?query=",
+        )
+    if "pmda.go.jp/english/search/search.html" in url:
+        # PMDA's English search page is gone; the closest live equivalent is
+        # the Japanese drug search portal. No clean query-string mapping.
+        return "https://www.pmda.go.jp/PmdaSearch/iyakuSearch/"
+    return url
 
 
 def load_priority_diseases(yml_path: Path) -> list[tuple[str, str]]:
@@ -53,174 +119,174 @@ def load_yaml(path: Path) -> dict:
     return data if data else {}
 
 
-def extract_evidence(record: dict) -> list[dict]:
-    """Extract evidence items from a record, preserving only non-empty fields."""
-    evidence_items = []
-    for ev in record.get("evidence", []):
-        item = {}
-        for key in (
-            "source",
-            "reference",
-            "reference_title",
-            "snippet",
-            "support",
-            "confidence_drug",
-            "confidence_disease",
-            "confidence_association",
-            "evidence_source",
-            "approval_status",
-            "max_research_phase",
-            "study_status",
-            "curator",
-        ):
-            val = ev.get(key)
-            if val is not None and val != "":
-                item[key] = val
-
-        # Backward compat: interpreted_text / interpretation -> explanation
-        if "explanation" not in item:
-            expl = ev.get("interpretation", "") or ev.get("interpreted_text", "")
-            if expl:
-                item["explanation"] = expl
-
-        # Backward compat: document_text / document_title -> reference_title
-        if "reference_title" not in item:
-            title = ev.get("document_title", "") or ev.get("document_text", "")
-            if title and len(title) < 200:
-                item["reference_title"] = title
-
-        # Backward compat: build source object from old flat fields
-        if "source" not in item:
-            source_obj = {}
-            st = ev.get("source_type", "")
-            sf = ev.get("source_file", "")
-            su = ev.get("source_url", "")
-            jur = ev.get("jurisdiction", "")
-
-            assoc_curator = record.get("curator", "")
-            if assoc_curator == "cureid":
-                source_obj["name"] = "NCATS CURE-ID"
-                source_obj["description"] = "Drug repurposing case reports from the NCATS CURE-ID open data platform"
-            elif sf and "research" in sf:
-                source_obj["name"] = "Deep research"
-                source_obj["description"] = f"AI-generated literature review from {sf}"
-            elif st:
-                source_obj["name"] = st
-            else:
-                source_obj["name"] = "UNKNOWN"
-
-            if st:
-                source_obj["type"] = st
-            if jur:
-                source_obj["jurisdiction"] = jur
-            if sf:
-                source_obj["file"] = sf
-            if su:
-                source_obj["url"] = su
-            if source_obj:
-                item["source"] = source_obj
-
-        # Backward compat: old single confidence -> all three dimensions
-        if "confidence_drug" not in item:
-            old_conf = ev.get("confidence", "")
-            if old_conf:
-                item["confidence_drug"] = old_conf
-                item["confidence_disease"] = old_conf
-                item["confidence_association"] = old_conf
-
-        if item:
-            evidence_items.append(item)
-    return evidence_items
+def _strip_empty(d: dict) -> dict:
+    """Drop keys whose values are empty strings, None, or empty lists/dicts."""
+    return {k: v for k, v in d.items() if v not in (None, "", [], {})}
 
 
-def make_drug_assoc(drug_id: str, drug_label: str, evidence: list[dict]) -> dict:
-    """Create a DrugAssociation dict."""
-    assoc = {"drug_label": drug_label}
-    if drug_id:
-        assoc["drug_id"] = drug_id
-    if evidence:
-        assoc["evidence"] = evidence
-    return assoc
+def build_source(ev: dict, drug_label: str) -> dict:
+    """Build a structured `source` object from a MeDIC evidence row.
+
+    The `reference` URL is intentionally not copied into `source.url` —
+    the evidence row carries the URL as `reference` already, and the UI
+    renders both, which would double the link in the card.
+    """
+    source_type = ev.get("source_type") or ""
+    jurisdiction = ev.get("jurisdiction") or ""
+
+    source: dict = {}
+    if source_type == "REGULATORY" and jurisdiction in JURISDICTION_TO_SOURCE:
+        info = JURISDICTION_TO_SOURCE[jurisdiction]
+        source["name"] = info["name"]
+        source["description"] = info["description"]
+    elif source_type:
+        # LITERATURE / DATABASE / GUIDELINE / POST_MARKET
+        source["name"] = source_type.replace("_", " ").title()
+    elif jurisdiction:
+        source["name"] = jurisdiction
+    else:
+        source["name"] = "UNKNOWN"
+
+    if source_type:
+        source["type"] = source_type
+    if jurisdiction:
+        source["jurisdiction"] = jurisdiction
+
+    return source
 
 
-SOURCE_DESCRIPTIONS = {
-    "fda": {
+def build_indication_evidence(ev: dict, drug_label: str) -> dict:
+    """Convert a MeDIC indication evidence row to our richer evidence shape."""
+    confidence = ev.get("confidence") or ""
+    item: dict = {
+        "source": build_source(ev, drug_label),
+        "source_type": ev.get("source_type") or "",
+        "source_role": ev.get("source_role") or "",
+        "jurisdiction": ev.get("jurisdiction") or "",
+        "reference": rewrite_dead_url(ev.get("reference") or ""),
+        "source_document_url": ev.get("source_document_url") or "",
+        "snippet": ev.get("snippet") or "",
+        "explanation": ev.get("explanation") or "",
+        "approval_status": ev.get("approval_status") or "",
+        "approval_date": normalize_approval_date(ev.get("approval_date")) or "",
+        "original_drug_label": ev.get("original_drug_label") or "",
+        "original_drug_id": ev.get("original_drug_id") or "",
+        "original_disease_label": ev.get("original_disease_label") or "",
+        "original_disease_id": ev.get("original_disease_id") or "",
+        "setid": ev.get("setid") or "",
+        "application_number": ev.get("application_number") or "",
+        "bla_number": ev.get("bla_number") or "",
+        "confidence": confidence,
+        # The site UI reads these three; keep them aligned with the single
+        # MeDIC `confidence` value until a richer breakdown is available.
+        "confidence_drug": confidence,
+        "confidence_disease": confidence,
+        "confidence_association": confidence,
+    }
+    return _strip_empty(item)
+
+
+def build_research_evidence(ev: dict) -> dict:
+    """Convert a MeDIC research evidence row to our evidence shape."""
+    curator = ev.get("curator")
+    confidence = ev.get("confidence") or ""
+    item: dict = {
         "source": {
-            "name": "FDA DailyMed",
-            "description": (
-                "Approved indications extracted from FDA DailyMed Structured Product Labels. "
-                "Raw label text was downloaded from DailyMed, then disease names were extracted "
-                "by an LLM (GPT-4) and grounded to ontology IDs by the MeDIC pipeline."
-            ),
-            "type": "REGULATORY",
-            "jurisdiction": "USA",
+            "name": (ev.get("source_type") or "").replace("_", " ").title() or "UNKNOWN",
+            "type": ev.get("source_type") or "",
         },
-        "url_template": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?labeltype=all&query={drug_label}",
-        "curator": {"curator_type": "PIPELINE", "name": "MeDIC indication ingest from FDA DailyMed SPL labels"},
-    },
-    "ema": {
-        "source": {
-            "name": "EMA EPAR",
-            "description": (
-                "Approved indications from European Public Assessment Reports (EPARs) "
-                "from the European Medicines Agency."
-            ),
-            "type": "REGULATORY",
-            "jurisdiction": "EU",
-        },
-        "url_template": "https://www.ema.europa.eu/en/search?search_api_fulltext={drug_label}",
-        "curator": {"curator_type": "PIPELINE", "name": "MeDIC indication ingest from EMA EPAR"},
-    },
-    "pmda": {
-        "source": {
-            "name": "PMDA",
-            "description": (
-                "Approved indications from the Japan Pharmaceuticals and Medical Devices Agency."
-            ),
-            "type": "REGULATORY",
-            "jurisdiction": "JAPAN",
-        },
-        "url_template": "https://www.pmda.go.jp/english/search_index.html",
-        "curator": {"curator_type": "PIPELINE", "name": "MeDIC indication ingest from PMDA drug labels"},
-    },
-}
+        "source_type": ev.get("source_type") or "",
+        "reference": rewrite_dead_url(ev.get("reference") or ""),
+        "reference_title": ev.get("reference_title") or "",
+        "page_or_section": ev.get("page_or_section") or "",
+        "snippet": ev.get("snippet") or "",
+        "explanation": ev.get("explanation") or "",
+        "evidence_source": ev.get("evidence_source") or "",
+        "original_drug_label": ev.get("original_drug_label") or "",
+        "original_drug_id": ev.get("original_drug_id") or "",
+        "original_disease_label": ev.get("original_disease_label") or "",
+        "original_disease_id": ev.get("original_disease_id") or "",
+        "confidence": confidence,
+        "confidence_drug": confidence,
+        "confidence_disease": confidence,
+        "confidence_association": confidence,
+    }
+    if isinstance(curator, dict):
+        item["curator"] = _strip_empty(dict(curator))
+    elif curator:
+        item["curator"] = {"name": str(curator)}
+
+    item["source"] = _strip_empty(item["source"])
+    return _strip_empty(item)
 
 
-def build_on_label_evidence(assoc: dict) -> list[dict]:
-    """Build evidence items from source flags and any existing evidence."""
-    evidence = extract_evidence(assoc)
-    drug_label = assoc.get("final_normalized_drug_label", "")
+def build_regulatory_status(rs: dict) -> dict:
+    """Convert a MeDIC regulatory_status row to our shape (with normalized date)."""
+    return _strip_empty(
+        {
+            "authority": rs.get("authority") or "",
+            "source": rs.get("source") or "",
+            "status": rs.get("status") or "",
+            "approval_date": normalize_approval_date(rs.get("approval_date")) or "",
+            "source_role": rs.get("source_role") or "",
+            "regulatory_document_url": rewrite_dead_url(rs.get("regulatory_document_url") or ""),
+            "source_document_url": rs.get("source_document_url") or "",
+            "setid": rs.get("setid") or "",
+            "application_number": rs.get("application_number") or "",
+            "bla_number": rs.get("bla_number") or "",
+        }
+    )
 
-    for flag, source_info in SOURCE_DESCRIPTIONS.items():
-        if assoc.get(flag):
-            indications_text = assoc.get("indications_text", "")
-            if indications_text:
-                snippet = indications_text
-            else:
-                drug_id = assoc.get("final_normalized_drug_id", "")
-                disease_id = assoc.get("final_normalized_disease_id", "")
-                disease_label = assoc.get("final_normalized_disease_label", "")
-                rel_type = assoc.get("relationship_type", "INDICATION")
-                snippet = (
-                    f"Source row: drug={drug_id} ({drug_label}), "
-                    f"disease={disease_id} ({disease_label}), "
-                    f"relationship={rel_type}, {flag.upper()}=True"
-                )
 
-            source_obj = dict(source_info["source"])
-            source_obj["url"] = source_info["url_template"].format(drug_label=drug_label.replace(" ", "+"))
+def build_indication_assoc(assoc: dict) -> dict:
+    """Build a DrugAssociation dict from a MeDIC indication / contraindication row."""
+    drug_id = assoc.get("final_normalized_drug_id") or ""
+    drug_label = assoc.get("final_normalized_drug_label") or ""
+    rel_type = assoc.get("relationship_type") or "INDICATION"
 
-            item = {
-                "source": source_obj,
-                "snippet": snippet,
-                "confidence_drug": "HIGH",
-                "confidence_disease": "HIGH",
-                "confidence_association": "HIGH",
-                "curator": source_info["curator"],
-            }
-            evidence.append(item)
+    evidence = [build_indication_evidence(ev, drug_label) for ev in assoc.get("evidence") or []]
+    regulatory_status = [build_regulatory_status(rs) for rs in assoc.get("regulatory_status") or []]
 
-    return evidence
+    out: dict = {
+        "drug_label": drug_label,
+        "drug_id": drug_id,
+        "relationship_type": rel_type,
+        "indications_text": assoc.get("indications_text") or "",
+        "regulatory_status": regulatory_status,
+        "evidence": evidence,
+    }
+    return _strip_empty(out)
+
+
+def build_research_assoc(assoc: dict) -> dict:
+    """Build a DrugAssociation dict from a MeDIC research row."""
+    drug_id = assoc.get("drug_id") or ""
+    drug_label = assoc.get("drug_label") or ""
+
+    evidence = [build_research_evidence(ev) for ev in assoc.get("evidence") or []]
+
+    curator = assoc.get("curator")
+    curator_obj: dict = {}
+    if isinstance(curator, dict):
+        curator_obj = _strip_empty(dict(curator))
+    elif isinstance(curator, str) and curator:
+        curator_obj = {"name": curator}
+
+    out: dict = {
+        "drug_label": drug_label,
+        "drug_id": drug_id,
+        "relationship_type": "RESEARCH",
+        "curation_status": assoc.get("curation_status") or "",
+        "curation_date": assoc.get("curation_date") or "",
+        "curator": curator_obj,
+        "deep_research_used": assoc.get("deep_research_used"),
+        "notes": assoc.get("notes") or "",
+        "evidence": evidence,
+    }
+    # `deep_research_used` is a bool; only drop it when None.
+    if out["deep_research_used"] is None:
+        out.pop("deep_research_used")
+    return _strip_empty(out)
 
 
 def aggregate_indications(
@@ -228,18 +294,14 @@ def aggregate_indications(
     indications: dict[str, list[dict]],
     contraindications: dict[str, list[dict]],
 ) -> None:
-    """Read indication associations and split by disease."""
+    """Read indication / contraindication associations and split by disease."""
     data = load_yaml(path)
     for assoc in data.get("associations", []):
-        disease_id = assoc.get("final_normalized_disease_id", "")
+        disease_id = assoc.get("final_normalized_disease_id") or ""
         if not disease_id:
             continue
-        drug_id = assoc.get("final_normalized_drug_id", "")
-        drug_label = assoc.get("final_normalized_drug_label", "")
-        evidence = build_on_label_evidence(assoc)
-        drug_assoc = make_drug_assoc(drug_id, drug_label, evidence)
-
-        rel_type = assoc.get("relationship_type", "")
+        drug_assoc = build_indication_assoc(assoc)
+        rel_type = assoc.get("relationship_type") or ""
         if rel_type == "CONTRAINDICATION":
             contraindications[disease_id].append(drug_assoc)
         else:
@@ -250,14 +312,10 @@ def aggregate_research(path: Path, research: dict[str, list[dict]]) -> None:
     """Read research associations and group by disease."""
     data = load_yaml(path)
     for assoc in data.get("associations", []):
-        disease_id = assoc.get("disease_id", "")
+        disease_id = assoc.get("disease_id") or ""
         if not disease_id:
             continue
-        drug_id = assoc.get("drug_id", "")
-        drug_label = assoc.get("drug_label", "")
-        evidence = extract_evidence(assoc)
-        drug_assoc = make_drug_assoc(drug_id, drug_label, evidence)
-        research[disease_id].append(drug_assoc)
+        research[disease_id].append(build_research_assoc(assoc))
 
 
 @click.command()
@@ -287,11 +345,9 @@ def main(medic_dir: Path, diseases: Path, output: Path):
         click.echo(f"Error: MeDIC products directory not found: {products_dir}", err=True)
         sys.exit(1)
 
-    # Load priority diseases
     priority_diseases = load_priority_diseases(diseases)
     click.echo(f"Loaded {len(priority_diseases)} priority diseases")
 
-    # Aggregate from MeDIC product files
     indications: dict[str, list[dict]] = defaultdict(list)
     contraindications: dict[str, list[dict]] = defaultdict(list)
     research: dict[str, list[dict]] = defaultdict(list)
@@ -300,7 +356,6 @@ def main(medic_dir: Path, diseases: Path, output: Path):
     aggregate_indications(products_dir / "contraindication_list.yaml", indications, contraindications)
     aggregate_research(products_dir / "research_list.yaml", research)
 
-    # Build disease records
     disease_records = []
     diseases_with_data = 0
     for disease_id, disease_label in priority_diseases:
@@ -315,8 +370,7 @@ def main(medic_dir: Path, diseases: Path, output: Path):
         if disease_id in research:
             record["research"] = research[disease_id]
 
-        has_data = any(disease_id in store for store in [indications, contraindications, research])
-        if has_data:
+        if any(disease_id in store for store in (indications, contraindications, research)):
             diseases_with_data += 1
         disease_records.append(record)
 
@@ -329,7 +383,14 @@ def main(medic_dir: Path, diseases: Path, output: Path):
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with open(output, "w") as f:
-        yaml.dump(report, f, Dumper=NoAliasDumper, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        yaml.dump(
+            report,
+            f,
+            Dumper=NoAliasDumper,
+            default_flow_style=False,
+            sort_keys=False,
+            allow_unicode=True,
+        )
 
     click.echo(f"Written {len(disease_records)} disease records to {output}")
     click.echo(f"  {diseases_with_data} diseases have at least one association")
