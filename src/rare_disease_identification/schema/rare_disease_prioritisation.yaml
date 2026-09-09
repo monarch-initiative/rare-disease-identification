@@ -2,7 +2,9 @@ id: https://w3id.org/rare-disease-identification
 name: rare_disease_prioritisation
 title: Rare Disease Prioritisation Schema
 description: >-
-  Schema for prioritised rare diseases for phenotypic characterization.
+  Schema for prioritised rare diseases for phenotypic characterization,
+  including drug-disease associations (indications, contraindications, research)
+  merged from the MeDIC knowledge base.
 
 prefixes:
   linkml: https://w3id.org/linkml/
@@ -38,18 +40,93 @@ enums:
       expanded:
         description: Extended set of diseases added after initial expert review to broaden coverage
 
-  SourceTypeEnum:
-    description: Type of evidence source.
+  RelationshipTypeEnum:
+    description: Type of drug-disease relationship.
     permissible_values:
-      LITERATURE:
-        description: Published literature
-      DATABASE:
-        description: Database or registry
+      INDICATION:
+        description: Drug is indicated for the disease
+      CONTRAINDICATION:
+        description: Drug is contraindicated for the disease
+      ADVERSE_EVENT:
+        description: Drug is associated with an adverse event in the context of the disease
+      RESEARCH:
+        description: Drug is investigated for the disease (research / off-label)
+
+  SourceRoleEnum:
+    description: >-
+      Whether a source is the primary canonical evidence record (e.g. official
+      EMA EPAR) or an intermediary source (e.g. a DailyMed label that mirrors
+      the FDA approval).
+    permissible_values:
+      PRIMARY:
+        description: Primary canonical source for the assertion
+      INTERMEDIARY:
+        description: Intermediary source repeating or fallback to a primary source
+
+  RegulatoryAuthorityEnum:
+    description: Regulatory authority granting approval / market authorisation.
+    permissible_values:
+      FDA:
+        description: U.S. Food and Drug Administration
+      EMA:
+        description: European Medicines Agency
+      PMDA:
+        description: Japan Pharmaceuticals and Medical Devices Agency
+      OTHER:
+        description: Other regulator
+
+  RegulatoryStatusEnum:
+    description: Regulatory approval status.
+    permissible_values:
+      APPROVED:
+        description: Approved for marketing
+      WITHDRAWN:
+        description: Approval withdrawn
+      DISCONTINUED:
+        description: Discontinued
+      INVESTIGATIONAL:
+        description: Under investigation
+      OFF_LABEL:
+        description: Used off-label
+
+  CurationStatusEnum:
+    description: Curation lifecycle status of a drug-disease association.
+    permissible_values:
+      DRAFT:
+        description: Draft / unreviewed
+      IN_REVIEW:
+        description: Under expert review
+      APPROVED:
+        description: Curator-approved
+      REJECTED:
+        description: Curator-rejected
+
+  CuratorTypeEnum:
+    description: Type of curator that produced an evidence record.
+    permissible_values:
+      AI_AGENT:
+        description: AI agent (LLM-based or other)
+      PIPELINE:
+        description: Automated extraction pipeline
+      HUMAN:
+        description: Human curator
+
+  SourceTypeEnum:
+    description: Broad category of evidence source.
+    permissible_values:
       REGULATORY:
-        description: Regulatory agency approval
+        description: Regulatory agency document (label, EPAR, etc.)
+      LITERATURE:
+        description: Published literature (PMID, PMC, journal article)
+      GUIDELINE:
+        description: Clinical practice guideline
+      DATABASE:
+        description: Curated database or registry
+      POST_MARKET:
+        description: Post-market surveillance / real-world evidence
 
   ConfidenceEnum:
-    description: Confidence level of the evidence.
+    description: Confidence level for an evidence record.
     permissible_values:
       LOW:
         description: Low confidence
@@ -59,10 +136,18 @@ enums:
         description: High confidence
 
   EvidenceSourceEnum:
-    description: Category of evidence source.
+    description: Provenance of the underlying evidence.
     permissible_values:
       HUMAN_CLINICAL:
-        description: Human clinical evidence
+        description: Human clinical evidence (trial, case report)
+      MODEL_ORGANISM:
+        description: Animal / model organism evidence
+      IN_VITRO:
+        description: In vitro / cell-based evidence
+      COMPUTATIONAL:
+        description: Computational / in silico evidence
+      OTHER:
+        description: Other / unspecified provenance
 
 classes:
   SimpleTerm:
@@ -76,6 +161,173 @@ classes:
       label:
         description: The human-readable label for the term.
         range: string
+
+  Source:
+    description: A description of the source from which evidence was extracted.
+    attributes:
+      name:
+        range: string
+        description: Human-readable source name (e.g. "FDA DailyMed", "EMA EPAR", "PMDA").
+      type:
+        range: SourceTypeEnum
+        description: Broad category of source.
+      jurisdiction:
+        range: string
+        description: Regulatory jurisdiction (USA, EU, JAPAN, INTERNATIONAL, etc.)
+      url:
+        range: string
+        description: URL for the source document or search.
+      description:
+        range: string
+        description: Description of the source provenance.
+      file:
+        range: string
+        description: Path to the source file (when available).
+
+  Curator:
+    description: The agent (human, pipeline or AI) that produced the evidence record.
+    attributes:
+      name:
+        range: string
+        description: Human-readable name of the curator.
+      curator_type:
+        range: CuratorTypeEnum
+        description: Type of curator (AI_AGENT, PIPELINE, HUMAN).
+      curator_id:
+        range: string
+        description: Stable identifier (URL, ORCID, etc.) for the curator.
+
+  RegulatoryStatus:
+    description: >-
+      A regulatory market-authorisation record for a drug-disease relationship,
+      recorded per authority. Multiple statuses can coexist (FDA, EMA, PMDA).
+    attributes:
+      authority:
+        range: RegulatoryAuthorityEnum
+        description: Regulatory authority that issued the status.
+      status:
+        range: RegulatoryStatusEnum
+        description: Approval status with this authority.
+      approval_date:
+        range: string
+        description: Approval date (ISO 8601 YYYY-MM-DD when known).
+      source_role:
+        range: SourceRoleEnum
+        description: Whether this record is primary or intermediary.
+      regulatory_document_url:
+        range: string
+        description: URL to the underlying regulatory document.
+
+  Evidence:
+    description: >-
+      A single piece of evidence supporting or refuting a drug-disease association.
+    attributes:
+      source:
+        range: Source
+        inlined: true
+        description: Structured description of the source.
+      source_type:
+        range: SourceTypeEnum
+        description: Broad type of source (kept as a flat field for compatibility).
+      source_role:
+        range: SourceRoleEnum
+        description: Primary canonical source vs intermediary fallback.
+      jurisdiction:
+        range: string
+        description: Regulatory jurisdiction (USA, EU, JAPAN, INTERNATIONAL, ...).
+      reference:
+        range: string
+        description: Reference identifier (PMID, PMC, NCT, DailyMed ID, URL, ...).
+      reference_title:
+        range: string
+        description: Title of the referenced document.
+      snippet:
+        range: string
+        description: Exact quote from the source document.
+      explanation:
+        range: string
+        description: How this evidence supports or refutes the drug-disease association.
+      support:
+        range: string
+        description: Whether evidence supports or refutes (SUPPORT, REFUTE, PARTIAL, NO_EVIDENCE).
+      confidence:
+        range: ConfidenceEnum
+        description: Overall confidence level.
+      confidence_drug:
+        range: ConfidenceEnum
+        description: Confidence in drug grounding.
+      confidence_disease:
+        range: ConfidenceEnum
+        description: Confidence in disease grounding.
+      confidence_association:
+        range: ConfidenceEnum
+        description: Confidence in the drug-disease association.
+      evidence_source:
+        range: EvidenceSourceEnum
+        description: Provenance category (HUMAN_CLINICAL, MODEL_ORGANISM, etc.).
+      approval_status:
+        range: RegulatoryStatusEnum
+        description: Clinical / regulatory approval status conveyed by this evidence.
+      approval_date:
+        range: string
+        description: Approval date attached to this evidence (ISO 8601 YYYY-MM-DD when known).
+      max_research_phase:
+        range: string
+        description: Maximum research phase (PRE_CLINICAL, PHASE_I-IV, CASE_REPORT, ...).
+      curator:
+        range: Curator
+        inlined: true
+        description: Curator that produced this evidence record.
+
+  DrugAssociation:
+    description: >-
+      A drug associated with a disease in a specific modality (indication,
+      contraindication, research), carrying evidence and modality-specific
+      metadata (regulatory status, curation status, ...).
+    attributes:
+      drug_id:
+        range: string
+        description: >-
+          Normalized drug identifier (CHEBI CURIE preferred). May be empty when
+          the drug could not be grounded.
+      drug_label:
+        range: string
+        required: true
+        description: Drug name or label.
+      relationship_type:
+        range: RelationshipTypeEnum
+        description: Relationship modality (INDICATION, CONTRAINDICATION, RESEARCH, ...).
+      indications_text:
+        range: string
+        description: >-
+          Verbatim indications / contraindications block from the drug label,
+          when available.
+      regulatory_status:
+        range: RegulatoryStatus
+        multivalued: true
+        inlined_as_list: true
+        description: Per-authority regulatory status records (FDA, EMA, PMDA, ...).
+      curation_status:
+        range: CurationStatusEnum
+        description: Curation lifecycle status (research associations only).
+      curation_date:
+        range: string
+        description: ISO 8601 date when this association was curated.
+      curator:
+        range: Curator
+        inlined: true
+        description: Top-level curator for the association (research associations).
+      deep_research_used:
+        range: boolean
+        description: Whether AI deep research was used to produce the association.
+      notes:
+        range: string
+        description: Free-text curator notes about the association.
+      evidence:
+        range: Evidence
+        multivalued: true
+        inlined_as_list: true
+        description: Evidence items supporting this association.
 
   RareDiseaseCollection:
     description: A collection of prioritised rare diseases.
@@ -112,11 +364,6 @@ classes:
         description: Alternative names and terms used to refer to this disease.
         range: string
         multivalued: true
-      mondo_categories:
-        description: MONDO disease categories (direct is-a parents).
-        range: SimpleTerm
-        multivalued: true
-        inlined_as_list: true
       hpo_high_level_categories:
         description: HPO high-level phenotype categories.
         range: SimpleTerm
@@ -208,72 +455,16 @@ classes:
         inlined_as_list: true
       indications:
         description: Approved drug indications for this disease.
-        range: DrugIndication
+        range: DrugAssociation
+        multivalued: true
+        inlined_as_list: true
+      contraindications:
+        description: Drugs contraindicated for this disease.
+        range: DrugAssociation
         multivalued: true
         inlined_as_list: true
       research:
         description: Drug/treatment research entries for this disease.
-        range: DrugResearch
+        range: DrugAssociation
         multivalued: true
         inlined_as_list: true
-
-  DrugIndication:
-    description: An approved drug indication for a disease.
-    attributes:
-      drug_label:
-        description: Name or label of the approved drug.
-        range: string
-        required: true
-      drug_id:
-        description: Identifier for the drug (e.g. DRUGBANK ID).
-        range: string
-      evidence:
-        description: Regulatory evidence for this indication.
-        range: RegulatoryEvidence
-        multivalued: true
-        inlined_as_list: true
-
-  RegulatoryEvidence:
-    description: Regulatory evidence for a drug indication.
-    attributes:
-      source_type:
-        description: Type of evidence source.
-        range: SourceTypeEnum
-      jurisdiction:
-        description: Regulatory jurisdiction (e.g. US, EU).
-        range: string
-      explanation:
-        description: Explanation of the regulatory evidence.
-        range: string
-
-  DrugResearch:
-    description: A drug or treatment research entry for a disease.
-    attributes:
-      drug_label:
-        description: Name or label of the drug or treatment.
-        range: string
-        required: true
-      evidence:
-        description: Evidence entries supporting this drug/treatment.
-        range: Evidence
-        multivalued: true
-        inlined_as_list: true
-
-  Evidence:
-    description: A single piece of evidence for a drug or treatment.
-    attributes:
-      source_type:
-        description: Type of evidence source (literature, database).
-        range: SourceTypeEnum
-      reference:
-        description: Reference identifier (PMID, PMC, URL, etc.).
-        range: string
-      interpreted_text:
-        description: Interpreted summary of the evidence.
-        range: string
-      confidence:
-        description: Confidence level of the evidence.
-        range: ConfidenceEnum
-      evidence_source:
-        description: Category of the evidence source.
-        range: EvidenceSourceEnum

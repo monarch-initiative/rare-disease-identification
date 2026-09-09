@@ -1,9 +1,9 @@
 # Auto generated from rare_disease_prioritisation.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-04-09T10:50:54
+# Generation date: 2026-05-07T23:09:59
 # Schema: rare_disease_prioritisation
 #
 # id: https://w3id.org/rare-disease-identification
-# description: Schema for prioritised rare diseases for phenotypic characterization.
+# description: Schema for prioritised rare diseases for phenotypic characterization, including drug-disease associations (indications, contraindications, research) merged from the MeDIC knowledge base.
 # license: https://creativecommons.org/publicdomain/zero/1.0/
 
 import dataclasses
@@ -56,7 +56,8 @@ from rdflib import (
     URIRef
 )
 
-from linkml_runtime.linkml_model.types import Float, String
+from linkml_runtime.linkml_model.types import Boolean, Float, String
+from linkml_runtime.utils.metamodelcore import Bool
 
 metamodel_version = "1.7.0"
 version = None
@@ -108,6 +109,269 @@ class SimpleTerm(YAMLRoot):
 
 
 @dataclass(repr=False)
+class Source(YAMLRoot):
+    """
+    A description of the source from which evidence was extracted.
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RDID["Source"]
+    class_class_curie: ClassVar[str] = "rdid:Source"
+    class_name: ClassVar[str] = "Source"
+    class_model_uri: ClassVar[URIRef] = RDID.Source
+
+    name: Optional[str] = None
+    type: Optional[Union[str, "SourceTypeEnum"]] = None
+    jurisdiction: Optional[str] = None
+    url: Optional[str] = None
+    description: Optional[str] = None
+    file: Optional[str] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self.name is not None and not isinstance(self.name, str):
+            self.name = str(self.name)
+
+        if self.type is not None and not isinstance(self.type, SourceTypeEnum):
+            self.type = SourceTypeEnum(self.type)
+
+        if self.jurisdiction is not None and not isinstance(self.jurisdiction, str):
+            self.jurisdiction = str(self.jurisdiction)
+
+        if self.url is not None and not isinstance(self.url, str):
+            self.url = str(self.url)
+
+        if self.description is not None and not isinstance(self.description, str):
+            self.description = str(self.description)
+
+        if self.file is not None and not isinstance(self.file, str):
+            self.file = str(self.file)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class Curator(YAMLRoot):
+    """
+    The agent (human, pipeline or AI) that produced the evidence record.
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RDID["Curator"]
+    class_class_curie: ClassVar[str] = "rdid:Curator"
+    class_name: ClassVar[str] = "Curator"
+    class_model_uri: ClassVar[URIRef] = RDID.Curator
+
+    name: Optional[str] = None
+    curator_type: Optional[Union[str, "CuratorTypeEnum"]] = None
+    curator_id: Optional[str] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self.name is not None and not isinstance(self.name, str):
+            self.name = str(self.name)
+
+        if self.curator_type is not None and not isinstance(self.curator_type, CuratorTypeEnum):
+            self.curator_type = CuratorTypeEnum(self.curator_type)
+
+        if self.curator_id is not None and not isinstance(self.curator_id, str):
+            self.curator_id = str(self.curator_id)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class RegulatoryStatus(YAMLRoot):
+    """
+    A regulatory market-authorisation record for a drug-disease relationship, recorded per authority. Multiple
+    statuses can coexist (FDA, EMA, PMDA).
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RDID["RegulatoryStatus"]
+    class_class_curie: ClassVar[str] = "rdid:RegulatoryStatus"
+    class_name: ClassVar[str] = "RegulatoryStatus"
+    class_model_uri: ClassVar[URIRef] = RDID.RegulatoryStatus
+
+    authority: Optional[Union[str, "RegulatoryAuthorityEnum"]] = None
+    status: Optional[Union[str, "RegulatoryStatusEnum"]] = None
+    approval_date: Optional[str] = None
+    source_role: Optional[Union[str, "SourceRoleEnum"]] = None
+    regulatory_document_url: Optional[str] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self.authority is not None and not isinstance(self.authority, RegulatoryAuthorityEnum):
+            self.authority = RegulatoryAuthorityEnum(self.authority)
+
+        if self.status is not None and not isinstance(self.status, RegulatoryStatusEnum):
+            self.status = RegulatoryStatusEnum(self.status)
+
+        if self.approval_date is not None and not isinstance(self.approval_date, str):
+            self.approval_date = str(self.approval_date)
+
+        if self.source_role is not None and not isinstance(self.source_role, SourceRoleEnum):
+            self.source_role = SourceRoleEnum(self.source_role)
+
+        if self.regulatory_document_url is not None and not isinstance(self.regulatory_document_url, str):
+            self.regulatory_document_url = str(self.regulatory_document_url)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class Evidence(YAMLRoot):
+    """
+    A single piece of evidence supporting or refuting a drug-disease association.
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RDID["Evidence"]
+    class_class_curie: ClassVar[str] = "rdid:Evidence"
+    class_name: ClassVar[str] = "Evidence"
+    class_model_uri: ClassVar[URIRef] = RDID.Evidence
+
+    source: Optional[Union[dict, Source]] = None
+    source_type: Optional[Union[str, "SourceTypeEnum"]] = None
+    source_role: Optional[Union[str, "SourceRoleEnum"]] = None
+    jurisdiction: Optional[str] = None
+    reference: Optional[str] = None
+    reference_title: Optional[str] = None
+    snippet: Optional[str] = None
+    explanation: Optional[str] = None
+    support: Optional[str] = None
+    confidence: Optional[Union[str, "ConfidenceEnum"]] = None
+    confidence_drug: Optional[Union[str, "ConfidenceEnum"]] = None
+    confidence_disease: Optional[Union[str, "ConfidenceEnum"]] = None
+    confidence_association: Optional[Union[str, "ConfidenceEnum"]] = None
+    evidence_source: Optional[Union[str, "EvidenceSourceEnum"]] = None
+    approval_status: Optional[Union[str, "RegulatoryStatusEnum"]] = None
+    approval_date: Optional[str] = None
+    max_research_phase: Optional[str] = None
+    curator: Optional[Union[dict, Curator]] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self.source is not None and not isinstance(self.source, Source):
+            self.source = Source(**as_dict(self.source))
+
+        if self.source_type is not None and not isinstance(self.source_type, SourceTypeEnum):
+            self.source_type = SourceTypeEnum(self.source_type)
+
+        if self.source_role is not None and not isinstance(self.source_role, SourceRoleEnum):
+            self.source_role = SourceRoleEnum(self.source_role)
+
+        if self.jurisdiction is not None and not isinstance(self.jurisdiction, str):
+            self.jurisdiction = str(self.jurisdiction)
+
+        if self.reference is not None and not isinstance(self.reference, str):
+            self.reference = str(self.reference)
+
+        if self.reference_title is not None and not isinstance(self.reference_title, str):
+            self.reference_title = str(self.reference_title)
+
+        if self.snippet is not None and not isinstance(self.snippet, str):
+            self.snippet = str(self.snippet)
+
+        if self.explanation is not None and not isinstance(self.explanation, str):
+            self.explanation = str(self.explanation)
+
+        if self.support is not None and not isinstance(self.support, str):
+            self.support = str(self.support)
+
+        if self.confidence is not None and not isinstance(self.confidence, ConfidenceEnum):
+            self.confidence = ConfidenceEnum(self.confidence)
+
+        if self.confidence_drug is not None and not isinstance(self.confidence_drug, ConfidenceEnum):
+            self.confidence_drug = ConfidenceEnum(self.confidence_drug)
+
+        if self.confidence_disease is not None and not isinstance(self.confidence_disease, ConfidenceEnum):
+            self.confidence_disease = ConfidenceEnum(self.confidence_disease)
+
+        if self.confidence_association is not None and not isinstance(self.confidence_association, ConfidenceEnum):
+            self.confidence_association = ConfidenceEnum(self.confidence_association)
+
+        if self.evidence_source is not None and not isinstance(self.evidence_source, EvidenceSourceEnum):
+            self.evidence_source = EvidenceSourceEnum(self.evidence_source)
+
+        if self.approval_status is not None and not isinstance(self.approval_status, RegulatoryStatusEnum):
+            self.approval_status = RegulatoryStatusEnum(self.approval_status)
+
+        if self.approval_date is not None and not isinstance(self.approval_date, str):
+            self.approval_date = str(self.approval_date)
+
+        if self.max_research_phase is not None and not isinstance(self.max_research_phase, str):
+            self.max_research_phase = str(self.max_research_phase)
+
+        if self.curator is not None and not isinstance(self.curator, Curator):
+            self.curator = Curator(**as_dict(self.curator))
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class DrugAssociation(YAMLRoot):
+    """
+    A drug associated with a disease in a specific modality (indication, contraindication, research), carrying
+    evidence and modality-specific metadata (regulatory status, curation status, ...).
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RDID["DrugAssociation"]
+    class_class_curie: ClassVar[str] = "rdid:DrugAssociation"
+    class_name: ClassVar[str] = "DrugAssociation"
+    class_model_uri: ClassVar[URIRef] = RDID.DrugAssociation
+
+    drug_label: str = None
+    drug_id: Optional[str] = None
+    relationship_type: Optional[Union[str, "RelationshipTypeEnum"]] = None
+    indications_text: Optional[str] = None
+    regulatory_status: Optional[Union[Union[dict, RegulatoryStatus], list[Union[dict, RegulatoryStatus]]]] = empty_list()
+    curation_status: Optional[Union[str, "CurationStatusEnum"]] = None
+    curation_date: Optional[str] = None
+    curator: Optional[Union[dict, Curator]] = None
+    deep_research_used: Optional[Union[bool, Bool]] = None
+    notes: Optional[str] = None
+    evidence: Optional[Union[Union[dict, Evidence], list[Union[dict, Evidence]]]] = empty_list()
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.drug_label):
+            self.MissingRequiredField("drug_label")
+        if not isinstance(self.drug_label, str):
+            self.drug_label = str(self.drug_label)
+
+        if self.drug_id is not None and not isinstance(self.drug_id, str):
+            self.drug_id = str(self.drug_id)
+
+        if self.relationship_type is not None and not isinstance(self.relationship_type, RelationshipTypeEnum):
+            self.relationship_type = RelationshipTypeEnum(self.relationship_type)
+
+        if self.indications_text is not None and not isinstance(self.indications_text, str):
+            self.indications_text = str(self.indications_text)
+
+        if not isinstance(self.regulatory_status, list):
+            self.regulatory_status = [self.regulatory_status] if self.regulatory_status is not None else []
+        self.regulatory_status = [v if isinstance(v, RegulatoryStatus) else RegulatoryStatus(**as_dict(v)) for v in self.regulatory_status]
+
+        if self.curation_status is not None and not isinstance(self.curation_status, CurationStatusEnum):
+            self.curation_status = CurationStatusEnum(self.curation_status)
+
+        if self.curation_date is not None and not isinstance(self.curation_date, str):
+            self.curation_date = str(self.curation_date)
+
+        if self.curator is not None and not isinstance(self.curator, Curator):
+            self.curator = Curator(**as_dict(self.curator))
+
+        if self.deep_research_used is not None and not isinstance(self.deep_research_used, Bool):
+            self.deep_research_used = Bool(self.deep_research_used)
+
+        if self.notes is not None and not isinstance(self.notes, str):
+            self.notes = str(self.notes)
+
+        if not isinstance(self.evidence, list):
+            self.evidence = [self.evidence] if self.evidence is not None else []
+        self.evidence = [v if isinstance(v, Evidence) else Evidence(**as_dict(v)) for v in self.evidence]
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
 class RareDiseaseCollection(YAMLRoot):
     """
     A collection of prioritised rare diseases.
@@ -154,7 +418,6 @@ class RareDisease(YAMLRoot):
     mondo_id: Union[str, RareDiseaseMondoId] = None
     mondo_label: str = None
     mondo_synonyms: Optional[Union[str, list[str]]] = empty_list()
-    mondo_categories: Optional[Union[dict[Union[str, SimpleTermId], Union[dict, SimpleTerm]], list[Union[dict, SimpleTerm]]]] = empty_dict()
     hpo_high_level_categories: Optional[Union[dict[Union[str, SimpleTermId], Union[dict, SimpleTerm]], list[Union[dict, SimpleTerm]]]] = empty_dict()
     histopheno_categories: Optional[Union[str, list[str]]] = empty_list()
     keywords: Optional[Union[str, list[str]]] = empty_list()
@@ -173,8 +436,9 @@ class RareDisease(YAMLRoot):
     mondo_category_genetic: Optional[Union[dict[Union[str, SimpleTermId], Union[dict, SimpleTerm]], list[Union[dict, SimpleTerm]]]] = empty_dict()
     mondo_category_extrinsic: Optional[Union[dict[Union[str, SimpleTermId], Union[dict, SimpleTerm]], list[Union[dict, SimpleTerm]]]] = empty_dict()
     mondo_category_molecular: Optional[Union[dict[Union[str, SimpleTermId], Union[dict, SimpleTerm]], list[Union[dict, SimpleTerm]]]] = empty_dict()
-    indications: Optional[Union[Union[dict, "DrugIndication"], list[Union[dict, "DrugIndication"]]]] = empty_list()
-    research: Optional[Union[Union[dict, "DrugResearch"], list[Union[dict, "DrugResearch"]]]] = empty_list()
+    indications: Optional[Union[Union[dict, DrugAssociation], list[Union[dict, DrugAssociation]]]] = empty_list()
+    contraindications: Optional[Union[Union[dict, DrugAssociation], list[Union[dict, DrugAssociation]]]] = empty_list()
+    research: Optional[Union[Union[dict, DrugAssociation], list[Union[dict, DrugAssociation]]]] = empty_list()
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.mondo_id):
@@ -190,8 +454,6 @@ class RareDisease(YAMLRoot):
         if not isinstance(self.mondo_synonyms, list):
             self.mondo_synonyms = [self.mondo_synonyms] if self.mondo_synonyms is not None else []
         self.mondo_synonyms = [v if isinstance(v, str) else str(v) for v in self.mondo_synonyms]
-
-        self._normalize_inlined_as_list(slot_name="mondo_categories", slot_type=SimpleTerm, key_name="id", keyed=True)
 
         self._normalize_inlined_as_list(slot_name="hpo_high_level_categories", slot_type=SimpleTerm, key_name="id", keyed=True)
 
@@ -243,135 +505,11 @@ class RareDisease(YAMLRoot):
 
         self._normalize_inlined_as_list(slot_name="mondo_category_molecular", slot_type=SimpleTerm, key_name="id", keyed=True)
 
-        self._normalize_inlined_as_list(slot_name="indications", slot_type=DrugIndication, key_name="drug_label", keyed=False)
+        self._normalize_inlined_as_list(slot_name="indications", slot_type=DrugAssociation, key_name="drug_label", keyed=False)
 
-        self._normalize_inlined_as_list(slot_name="research", slot_type=DrugResearch, key_name="drug_label", keyed=False)
+        self._normalize_inlined_as_list(slot_name="contraindications", slot_type=DrugAssociation, key_name="drug_label", keyed=False)
 
-        super().__post_init__(**kwargs)
-
-
-@dataclass(repr=False)
-class DrugIndication(YAMLRoot):
-    """
-    An approved drug indication for a disease.
-    """
-    _inherited_slots: ClassVar[list[str]] = []
-
-    class_class_uri: ClassVar[URIRef] = RDID["DrugIndication"]
-    class_class_curie: ClassVar[str] = "rdid:DrugIndication"
-    class_name: ClassVar[str] = "DrugIndication"
-    class_model_uri: ClassVar[URIRef] = RDID.DrugIndication
-
-    drug_label: str = None
-    drug_id: Optional[str] = None
-    evidence: Optional[Union[Union[dict, "RegulatoryEvidence"], list[Union[dict, "RegulatoryEvidence"]]]] = empty_list()
-
-    def __post_init__(self, *_: str, **kwargs: Any):
-        if self._is_empty(self.drug_label):
-            self.MissingRequiredField("drug_label")
-        if not isinstance(self.drug_label, str):
-            self.drug_label = str(self.drug_label)
-
-        if self.drug_id is not None and not isinstance(self.drug_id, str):
-            self.drug_id = str(self.drug_id)
-
-        if not isinstance(self.evidence, list):
-            self.evidence = [self.evidence] if self.evidence is not None else []
-        self.evidence = [v if isinstance(v, RegulatoryEvidence) else RegulatoryEvidence(**as_dict(v)) for v in self.evidence]
-
-        super().__post_init__(**kwargs)
-
-
-@dataclass(repr=False)
-class RegulatoryEvidence(YAMLRoot):
-    """
-    Regulatory evidence for a drug indication.
-    """
-    _inherited_slots: ClassVar[list[str]] = []
-
-    class_class_uri: ClassVar[URIRef] = RDID["RegulatoryEvidence"]
-    class_class_curie: ClassVar[str] = "rdid:RegulatoryEvidence"
-    class_name: ClassVar[str] = "RegulatoryEvidence"
-    class_model_uri: ClassVar[URIRef] = RDID.RegulatoryEvidence
-
-    source_type: Optional[Union[str, "SourceTypeEnum"]] = None
-    jurisdiction: Optional[str] = None
-    explanation: Optional[str] = None
-
-    def __post_init__(self, *_: str, **kwargs: Any):
-        if self.source_type is not None and not isinstance(self.source_type, SourceTypeEnum):
-            self.source_type = SourceTypeEnum(self.source_type)
-
-        if self.jurisdiction is not None and not isinstance(self.jurisdiction, str):
-            self.jurisdiction = str(self.jurisdiction)
-
-        if self.explanation is not None and not isinstance(self.explanation, str):
-            self.explanation = str(self.explanation)
-
-        super().__post_init__(**kwargs)
-
-
-@dataclass(repr=False)
-class DrugResearch(YAMLRoot):
-    """
-    A drug or treatment research entry for a disease.
-    """
-    _inherited_slots: ClassVar[list[str]] = []
-
-    class_class_uri: ClassVar[URIRef] = RDID["DrugResearch"]
-    class_class_curie: ClassVar[str] = "rdid:DrugResearch"
-    class_name: ClassVar[str] = "DrugResearch"
-    class_model_uri: ClassVar[URIRef] = RDID.DrugResearch
-
-    drug_label: str = None
-    evidence: Optional[Union[Union[dict, "Evidence"], list[Union[dict, "Evidence"]]]] = empty_list()
-
-    def __post_init__(self, *_: str, **kwargs: Any):
-        if self._is_empty(self.drug_label):
-            self.MissingRequiredField("drug_label")
-        if not isinstance(self.drug_label, str):
-            self.drug_label = str(self.drug_label)
-
-        if not isinstance(self.evidence, list):
-            self.evidence = [self.evidence] if self.evidence is not None else []
-        self.evidence = [v if isinstance(v, Evidence) else Evidence(**as_dict(v)) for v in self.evidence]
-
-        super().__post_init__(**kwargs)
-
-
-@dataclass(repr=False)
-class Evidence(YAMLRoot):
-    """
-    A single piece of evidence for a drug or treatment.
-    """
-    _inherited_slots: ClassVar[list[str]] = []
-
-    class_class_uri: ClassVar[URIRef] = RDID["Evidence"]
-    class_class_curie: ClassVar[str] = "rdid:Evidence"
-    class_name: ClassVar[str] = "Evidence"
-    class_model_uri: ClassVar[URIRef] = RDID.Evidence
-
-    source_type: Optional[Union[str, "SourceTypeEnum"]] = None
-    reference: Optional[str] = None
-    interpreted_text: Optional[str] = None
-    confidence: Optional[Union[str, "ConfidenceEnum"]] = None
-    evidence_source: Optional[Union[str, "EvidenceSourceEnum"]] = None
-
-    def __post_init__(self, *_: str, **kwargs: Any):
-        if self.source_type is not None and not isinstance(self.source_type, SourceTypeEnum):
-            self.source_type = SourceTypeEnum(self.source_type)
-
-        if self.reference is not None and not isinstance(self.reference, str):
-            self.reference = str(self.reference)
-
-        if self.interpreted_text is not None and not isinstance(self.interpreted_text, str):
-            self.interpreted_text = str(self.interpreted_text)
-
-        if self.confidence is not None and not isinstance(self.confidence, ConfidenceEnum):
-            self.confidence = ConfidenceEnum(self.confidence)
-
-        if self.evidence_source is not None and not isinstance(self.evidence_source, EvidenceSourceEnum):
-            self.evidence_source = EvidenceSourceEnum(self.evidence_source)
+        self._normalize_inlined_as_list(slot_name="research", slot_type=DrugAssociation, key_name="drug_label", keyed=False)
 
         super().__post_init__(**kwargs)
 
@@ -415,28 +553,161 @@ class PrioritizationCategoryEnum(EnumDefinitionImpl):
         description="Category indicating the prioritization tier for the disease.",
     )
 
+class RelationshipTypeEnum(EnumDefinitionImpl):
+    """
+    Type of drug-disease relationship.
+    """
+    INDICATION = PermissibleValue(
+        text="INDICATION",
+        description="Drug is indicated for the disease")
+    CONTRAINDICATION = PermissibleValue(
+        text="CONTRAINDICATION",
+        description="Drug is contraindicated for the disease")
+    ADVERSE_EVENT = PermissibleValue(
+        text="ADVERSE_EVENT",
+        description="Drug is associated with an adverse event in the context of the disease")
+    RESEARCH = PermissibleValue(
+        text="RESEARCH",
+        description="Drug is investigated for the disease (research / off-label)")
+
+    _defn = EnumDefinition(
+        name="RelationshipTypeEnum",
+        description="Type of drug-disease relationship.",
+    )
+
+class SourceRoleEnum(EnumDefinitionImpl):
+    """
+    Whether a source is the primary canonical evidence record (e.g. official EMA EPAR) or an intermediary source (e.g.
+    a DailyMed label that mirrors the FDA approval).
+    """
+    PRIMARY = PermissibleValue(
+        text="PRIMARY",
+        description="Primary canonical source for the assertion")
+    INTERMEDIARY = PermissibleValue(
+        text="INTERMEDIARY",
+        description="Intermediary source repeating or fallback to a primary source")
+
+    _defn = EnumDefinition(
+        name="SourceRoleEnum",
+        description="""Whether a source is the primary canonical evidence record (e.g. official EMA EPAR) or an intermediary source (e.g. a DailyMed label that mirrors the FDA approval).""",
+    )
+
+class RegulatoryAuthorityEnum(EnumDefinitionImpl):
+    """
+    Regulatory authority granting approval / market authorisation.
+    """
+    FDA = PermissibleValue(
+        text="FDA",
+        description="U.S. Food and Drug Administration")
+    EMA = PermissibleValue(
+        text="EMA",
+        description="European Medicines Agency")
+    PMDA = PermissibleValue(
+        text="PMDA",
+        description="Japan Pharmaceuticals and Medical Devices Agency")
+    OTHER = PermissibleValue(
+        text="OTHER",
+        description="Other regulator")
+
+    _defn = EnumDefinition(
+        name="RegulatoryAuthorityEnum",
+        description="Regulatory authority granting approval / market authorisation.",
+    )
+
+class RegulatoryStatusEnum(EnumDefinitionImpl):
+    """
+    Regulatory approval status.
+    """
+    APPROVED = PermissibleValue(
+        text="APPROVED",
+        description="Approved for marketing")
+    WITHDRAWN = PermissibleValue(
+        text="WITHDRAWN",
+        description="Approval withdrawn")
+    DISCONTINUED = PermissibleValue(
+        text="DISCONTINUED",
+        description="Discontinued")
+    INVESTIGATIONAL = PermissibleValue(
+        text="INVESTIGATIONAL",
+        description="Under investigation")
+    OFF_LABEL = PermissibleValue(
+        text="OFF_LABEL",
+        description="Used off-label")
+
+    _defn = EnumDefinition(
+        name="RegulatoryStatusEnum",
+        description="Regulatory approval status.",
+    )
+
+class CurationStatusEnum(EnumDefinitionImpl):
+    """
+    Curation lifecycle status of a drug-disease association.
+    """
+    DRAFT = PermissibleValue(
+        text="DRAFT",
+        description="Draft / unreviewed")
+    IN_REVIEW = PermissibleValue(
+        text="IN_REVIEW",
+        description="Under expert review")
+    APPROVED = PermissibleValue(
+        text="APPROVED",
+        description="Curator-approved")
+    REJECTED = PermissibleValue(
+        text="REJECTED",
+        description="Curator-rejected")
+
+    _defn = EnumDefinition(
+        name="CurationStatusEnum",
+        description="Curation lifecycle status of a drug-disease association.",
+    )
+
+class CuratorTypeEnum(EnumDefinitionImpl):
+    """
+    Type of curator that produced an evidence record.
+    """
+    AI_AGENT = PermissibleValue(
+        text="AI_AGENT",
+        description="AI agent (LLM-based or other)")
+    PIPELINE = PermissibleValue(
+        text="PIPELINE",
+        description="Automated extraction pipeline")
+    HUMAN = PermissibleValue(
+        text="HUMAN",
+        description="Human curator")
+
+    _defn = EnumDefinition(
+        name="CuratorTypeEnum",
+        description="Type of curator that produced an evidence record.",
+    )
+
 class SourceTypeEnum(EnumDefinitionImpl):
     """
-    Type of evidence source.
+    Broad category of evidence source.
     """
-    LITERATURE = PermissibleValue(
-        text="LITERATURE",
-        description="Published literature")
-    DATABASE = PermissibleValue(
-        text="DATABASE",
-        description="Database or registry")
     REGULATORY = PermissibleValue(
         text="REGULATORY",
-        description="Regulatory agency approval")
+        description="Regulatory agency document (label, EPAR, etc.)")
+    LITERATURE = PermissibleValue(
+        text="LITERATURE",
+        description="Published literature (PMID, PMC, journal article)")
+    GUIDELINE = PermissibleValue(
+        text="GUIDELINE",
+        description="Clinical practice guideline")
+    DATABASE = PermissibleValue(
+        text="DATABASE",
+        description="Curated database or registry")
+    POST_MARKET = PermissibleValue(
+        text="POST_MARKET",
+        description="Post-market surveillance / real-world evidence")
 
     _defn = EnumDefinition(
         name="SourceTypeEnum",
-        description="Type of evidence source.",
+        description="Broad category of evidence source.",
     )
 
 class ConfidenceEnum(EnumDefinitionImpl):
     """
-    Confidence level of the evidence.
+    Confidence level for an evidence record.
     """
     LOW = PermissibleValue(
         text="LOW",
@@ -450,20 +721,32 @@ class ConfidenceEnum(EnumDefinitionImpl):
 
     _defn = EnumDefinition(
         name="ConfidenceEnum",
-        description="Confidence level of the evidence.",
+        description="Confidence level for an evidence record.",
     )
 
 class EvidenceSourceEnum(EnumDefinitionImpl):
     """
-    Category of evidence source.
+    Provenance of the underlying evidence.
     """
     HUMAN_CLINICAL = PermissibleValue(
         text="HUMAN_CLINICAL",
-        description="Human clinical evidence")
+        description="Human clinical evidence (trial, case report)")
+    MODEL_ORGANISM = PermissibleValue(
+        text="MODEL_ORGANISM",
+        description="Animal / model organism evidence")
+    IN_VITRO = PermissibleValue(
+        text="IN_VITRO",
+        description="In vitro / cell-based evidence")
+    COMPUTATIONAL = PermissibleValue(
+        text="COMPUTATIONAL",
+        description="Computational / in silico evidence")
+    OTHER = PermissibleValue(
+        text="OTHER",
+        description="Other / unspecified provenance")
 
     _defn = EnumDefinition(
         name="EvidenceSourceEnum",
-        description="Category of evidence source.",
+        description="Provenance of the underlying evidence.",
     )
 
 # Slots
@@ -475,6 +758,135 @@ slots.simpleTerm__id = Slot(uri=RDID.id, name="simpleTerm__id", curie=RDID.curie
 
 slots.simpleTerm__label = Slot(uri=RDID.label, name="simpleTerm__label", curie=RDID.curie('label'),
                    model_uri=RDID.simpleTerm__label, domain=None, range=Optional[str])
+
+slots.source__name = Slot(uri=RDID.name, name="source__name", curie=RDID.curie('name'),
+                   model_uri=RDID.source__name, domain=None, range=Optional[str])
+
+slots.source__type = Slot(uri=RDID.type, name="source__type", curie=RDID.curie('type'),
+                   model_uri=RDID.source__type, domain=None, range=Optional[Union[str, "SourceTypeEnum"]])
+
+slots.source__jurisdiction = Slot(uri=RDID.jurisdiction, name="source__jurisdiction", curie=RDID.curie('jurisdiction'),
+                   model_uri=RDID.source__jurisdiction, domain=None, range=Optional[str])
+
+slots.source__url = Slot(uri=RDID.url, name="source__url", curie=RDID.curie('url'),
+                   model_uri=RDID.source__url, domain=None, range=Optional[str])
+
+slots.source__description = Slot(uri=RDID.description, name="source__description", curie=RDID.curie('description'),
+                   model_uri=RDID.source__description, domain=None, range=Optional[str])
+
+slots.source__file = Slot(uri=RDID.file, name="source__file", curie=RDID.curie('file'),
+                   model_uri=RDID.source__file, domain=None, range=Optional[str])
+
+slots.curator__name = Slot(uri=RDID.name, name="curator__name", curie=RDID.curie('name'),
+                   model_uri=RDID.curator__name, domain=None, range=Optional[str])
+
+slots.curator__curator_type = Slot(uri=RDID.curator_type, name="curator__curator_type", curie=RDID.curie('curator_type'),
+                   model_uri=RDID.curator__curator_type, domain=None, range=Optional[Union[str, "CuratorTypeEnum"]])
+
+slots.curator__curator_id = Slot(uri=RDID.curator_id, name="curator__curator_id", curie=RDID.curie('curator_id'),
+                   model_uri=RDID.curator__curator_id, domain=None, range=Optional[str])
+
+slots.regulatoryStatus__authority = Slot(uri=RDID.authority, name="regulatoryStatus__authority", curie=RDID.curie('authority'),
+                   model_uri=RDID.regulatoryStatus__authority, domain=None, range=Optional[Union[str, "RegulatoryAuthorityEnum"]])
+
+slots.regulatoryStatus__status = Slot(uri=RDID.status, name="regulatoryStatus__status", curie=RDID.curie('status'),
+                   model_uri=RDID.regulatoryStatus__status, domain=None, range=Optional[Union[str, "RegulatoryStatusEnum"]])
+
+slots.regulatoryStatus__approval_date = Slot(uri=RDID.approval_date, name="regulatoryStatus__approval_date", curie=RDID.curie('approval_date'),
+                   model_uri=RDID.regulatoryStatus__approval_date, domain=None, range=Optional[str])
+
+slots.regulatoryStatus__source_role = Slot(uri=RDID.source_role, name="regulatoryStatus__source_role", curie=RDID.curie('source_role'),
+                   model_uri=RDID.regulatoryStatus__source_role, domain=None, range=Optional[Union[str, "SourceRoleEnum"]])
+
+slots.regulatoryStatus__regulatory_document_url = Slot(uri=RDID.regulatory_document_url, name="regulatoryStatus__regulatory_document_url", curie=RDID.curie('regulatory_document_url'),
+                   model_uri=RDID.regulatoryStatus__regulatory_document_url, domain=None, range=Optional[str])
+
+slots.evidence__source = Slot(uri=RDID.source, name="evidence__source", curie=RDID.curie('source'),
+                   model_uri=RDID.evidence__source, domain=None, range=Optional[Union[dict, Source]])
+
+slots.evidence__source_type = Slot(uri=RDID.source_type, name="evidence__source_type", curie=RDID.curie('source_type'),
+                   model_uri=RDID.evidence__source_type, domain=None, range=Optional[Union[str, "SourceTypeEnum"]])
+
+slots.evidence__source_role = Slot(uri=RDID.source_role, name="evidence__source_role", curie=RDID.curie('source_role'),
+                   model_uri=RDID.evidence__source_role, domain=None, range=Optional[Union[str, "SourceRoleEnum"]])
+
+slots.evidence__jurisdiction = Slot(uri=RDID.jurisdiction, name="evidence__jurisdiction", curie=RDID.curie('jurisdiction'),
+                   model_uri=RDID.evidence__jurisdiction, domain=None, range=Optional[str])
+
+slots.evidence__reference = Slot(uri=RDID.reference, name="evidence__reference", curie=RDID.curie('reference'),
+                   model_uri=RDID.evidence__reference, domain=None, range=Optional[str])
+
+slots.evidence__reference_title = Slot(uri=RDID.reference_title, name="evidence__reference_title", curie=RDID.curie('reference_title'),
+                   model_uri=RDID.evidence__reference_title, domain=None, range=Optional[str])
+
+slots.evidence__snippet = Slot(uri=RDID.snippet, name="evidence__snippet", curie=RDID.curie('snippet'),
+                   model_uri=RDID.evidence__snippet, domain=None, range=Optional[str])
+
+slots.evidence__explanation = Slot(uri=RDID.explanation, name="evidence__explanation", curie=RDID.curie('explanation'),
+                   model_uri=RDID.evidence__explanation, domain=None, range=Optional[str])
+
+slots.evidence__support = Slot(uri=RDID.support, name="evidence__support", curie=RDID.curie('support'),
+                   model_uri=RDID.evidence__support, domain=None, range=Optional[str])
+
+slots.evidence__confidence = Slot(uri=RDID.confidence, name="evidence__confidence", curie=RDID.curie('confidence'),
+                   model_uri=RDID.evidence__confidence, domain=None, range=Optional[Union[str, "ConfidenceEnum"]])
+
+slots.evidence__confidence_drug = Slot(uri=RDID.confidence_drug, name="evidence__confidence_drug", curie=RDID.curie('confidence_drug'),
+                   model_uri=RDID.evidence__confidence_drug, domain=None, range=Optional[Union[str, "ConfidenceEnum"]])
+
+slots.evidence__confidence_disease = Slot(uri=RDID.confidence_disease, name="evidence__confidence_disease", curie=RDID.curie('confidence_disease'),
+                   model_uri=RDID.evidence__confidence_disease, domain=None, range=Optional[Union[str, "ConfidenceEnum"]])
+
+slots.evidence__confidence_association = Slot(uri=RDID.confidence_association, name="evidence__confidence_association", curie=RDID.curie('confidence_association'),
+                   model_uri=RDID.evidence__confidence_association, domain=None, range=Optional[Union[str, "ConfidenceEnum"]])
+
+slots.evidence__evidence_source = Slot(uri=RDID.evidence_source, name="evidence__evidence_source", curie=RDID.curie('evidence_source'),
+                   model_uri=RDID.evidence__evidence_source, domain=None, range=Optional[Union[str, "EvidenceSourceEnum"]])
+
+slots.evidence__approval_status = Slot(uri=RDID.approval_status, name="evidence__approval_status", curie=RDID.curie('approval_status'),
+                   model_uri=RDID.evidence__approval_status, domain=None, range=Optional[Union[str, "RegulatoryStatusEnum"]])
+
+slots.evidence__approval_date = Slot(uri=RDID.approval_date, name="evidence__approval_date", curie=RDID.curie('approval_date'),
+                   model_uri=RDID.evidence__approval_date, domain=None, range=Optional[str])
+
+slots.evidence__max_research_phase = Slot(uri=RDID.max_research_phase, name="evidence__max_research_phase", curie=RDID.curie('max_research_phase'),
+                   model_uri=RDID.evidence__max_research_phase, domain=None, range=Optional[str])
+
+slots.evidence__curator = Slot(uri=RDID.curator, name="evidence__curator", curie=RDID.curie('curator'),
+                   model_uri=RDID.evidence__curator, domain=None, range=Optional[Union[dict, Curator]])
+
+slots.drugAssociation__drug_id = Slot(uri=RDID.drug_id, name="drugAssociation__drug_id", curie=RDID.curie('drug_id'),
+                   model_uri=RDID.drugAssociation__drug_id, domain=None, range=Optional[str])
+
+slots.drugAssociation__drug_label = Slot(uri=RDID.drug_label, name="drugAssociation__drug_label", curie=RDID.curie('drug_label'),
+                   model_uri=RDID.drugAssociation__drug_label, domain=None, range=str)
+
+slots.drugAssociation__relationship_type = Slot(uri=RDID.relationship_type, name="drugAssociation__relationship_type", curie=RDID.curie('relationship_type'),
+                   model_uri=RDID.drugAssociation__relationship_type, domain=None, range=Optional[Union[str, "RelationshipTypeEnum"]])
+
+slots.drugAssociation__indications_text = Slot(uri=RDID.indications_text, name="drugAssociation__indications_text", curie=RDID.curie('indications_text'),
+                   model_uri=RDID.drugAssociation__indications_text, domain=None, range=Optional[str])
+
+slots.drugAssociation__regulatory_status = Slot(uri=RDID.regulatory_status, name="drugAssociation__regulatory_status", curie=RDID.curie('regulatory_status'),
+                   model_uri=RDID.drugAssociation__regulatory_status, domain=None, range=Optional[Union[Union[dict, RegulatoryStatus], list[Union[dict, RegulatoryStatus]]]])
+
+slots.drugAssociation__curation_status = Slot(uri=RDID.curation_status, name="drugAssociation__curation_status", curie=RDID.curie('curation_status'),
+                   model_uri=RDID.drugAssociation__curation_status, domain=None, range=Optional[Union[str, "CurationStatusEnum"]])
+
+slots.drugAssociation__curation_date = Slot(uri=RDID.curation_date, name="drugAssociation__curation_date", curie=RDID.curie('curation_date'),
+                   model_uri=RDID.drugAssociation__curation_date, domain=None, range=Optional[str])
+
+slots.drugAssociation__curator = Slot(uri=RDID.curator, name="drugAssociation__curator", curie=RDID.curie('curator'),
+                   model_uri=RDID.drugAssociation__curator, domain=None, range=Optional[Union[dict, Curator]])
+
+slots.drugAssociation__deep_research_used = Slot(uri=RDID.deep_research_used, name="drugAssociation__deep_research_used", curie=RDID.curie('deep_research_used'),
+                   model_uri=RDID.drugAssociation__deep_research_used, domain=None, range=Optional[Union[bool, Bool]])
+
+slots.drugAssociation__notes = Slot(uri=RDID.notes, name="drugAssociation__notes", curie=RDID.curie('notes'),
+                   model_uri=RDID.drugAssociation__notes, domain=None, range=Optional[str])
+
+slots.drugAssociation__evidence = Slot(uri=RDID.evidence, name="drugAssociation__evidence", curie=RDID.curie('evidence'),
+                   model_uri=RDID.drugAssociation__evidence, domain=None, range=Optional[Union[Union[dict, Evidence], list[Union[dict, Evidence]]]])
 
 slots.rareDiseaseCollection__title = Slot(uri=RDID.title, name="rareDiseaseCollection__title", curie=RDID.curie('title'),
                    model_uri=RDID.rareDiseaseCollection__title, domain=None, range=Optional[str])
@@ -497,9 +909,6 @@ slots.rareDisease__mondo_label = Slot(uri=RDID.mondo_label, name="rareDisease__m
 
 slots.rareDisease__mondo_synonyms = Slot(uri=RDID.mondo_synonyms, name="rareDisease__mondo_synonyms", curie=RDID.curie('mondo_synonyms'),
                    model_uri=RDID.rareDisease__mondo_synonyms, domain=None, range=Optional[Union[str, list[str]]])
-
-slots.rareDisease__mondo_categories = Slot(uri=RDID.mondo_categories, name="rareDisease__mondo_categories", curie=RDID.curie('mondo_categories'),
-                   model_uri=RDID.rareDisease__mondo_categories, domain=None, range=Optional[Union[dict[Union[str, SimpleTermId], Union[dict, SimpleTerm]], list[Union[dict, SimpleTerm]]]])
 
 slots.rareDisease__hpo_high_level_categories = Slot(uri=RDID.hpo_high_level_categories, name="rareDisease__hpo_high_level_categories", curie=RDID.curie('hpo_high_level_categories'),
                    model_uri=RDID.rareDisease__hpo_high_level_categories, domain=None, range=Optional[Union[dict[Union[str, SimpleTermId], Union[dict, SimpleTerm]], list[Union[dict, SimpleTerm]]]])
@@ -556,47 +965,11 @@ slots.rareDisease__mondo_category_molecular = Slot(uri=RDID.mondo_category_molec
                    model_uri=RDID.rareDisease__mondo_category_molecular, domain=None, range=Optional[Union[dict[Union[str, SimpleTermId], Union[dict, SimpleTerm]], list[Union[dict, SimpleTerm]]]])
 
 slots.rareDisease__indications = Slot(uri=RDID.indications, name="rareDisease__indications", curie=RDID.curie('indications'),
-                   model_uri=RDID.rareDisease__indications, domain=None, range=Optional[Union[Union[dict, DrugIndication], list[Union[dict, DrugIndication]]]])
+                   model_uri=RDID.rareDisease__indications, domain=None, range=Optional[Union[Union[dict, DrugAssociation], list[Union[dict, DrugAssociation]]]])
+
+slots.rareDisease__contraindications = Slot(uri=RDID.contraindications, name="rareDisease__contraindications", curie=RDID.curie('contraindications'),
+                   model_uri=RDID.rareDisease__contraindications, domain=None, range=Optional[Union[Union[dict, DrugAssociation], list[Union[dict, DrugAssociation]]]])
 
 slots.rareDisease__research = Slot(uri=RDID.research, name="rareDisease__research", curie=RDID.curie('research'),
-                   model_uri=RDID.rareDisease__research, domain=None, range=Optional[Union[Union[dict, DrugResearch], list[Union[dict, DrugResearch]]]])
-
-slots.drugIndication__drug_label = Slot(uri=RDID.drug_label, name="drugIndication__drug_label", curie=RDID.curie('drug_label'),
-                   model_uri=RDID.drugIndication__drug_label, domain=None, range=str)
-
-slots.drugIndication__drug_id = Slot(uri=RDID.drug_id, name="drugIndication__drug_id", curie=RDID.curie('drug_id'),
-                   model_uri=RDID.drugIndication__drug_id, domain=None, range=Optional[str])
-
-slots.drugIndication__evidence = Slot(uri=RDID.evidence, name="drugIndication__evidence", curie=RDID.curie('evidence'),
-                   model_uri=RDID.drugIndication__evidence, domain=None, range=Optional[Union[Union[dict, RegulatoryEvidence], list[Union[dict, RegulatoryEvidence]]]])
-
-slots.regulatoryEvidence__source_type = Slot(uri=RDID.source_type, name="regulatoryEvidence__source_type", curie=RDID.curie('source_type'),
-                   model_uri=RDID.regulatoryEvidence__source_type, domain=None, range=Optional[Union[str, "SourceTypeEnum"]])
-
-slots.regulatoryEvidence__jurisdiction = Slot(uri=RDID.jurisdiction, name="regulatoryEvidence__jurisdiction", curie=RDID.curie('jurisdiction'),
-                   model_uri=RDID.regulatoryEvidence__jurisdiction, domain=None, range=Optional[str])
-
-slots.regulatoryEvidence__explanation = Slot(uri=RDID.explanation, name="regulatoryEvidence__explanation", curie=RDID.curie('explanation'),
-                   model_uri=RDID.regulatoryEvidence__explanation, domain=None, range=Optional[str])
-
-slots.drugResearch__drug_label = Slot(uri=RDID.drug_label, name="drugResearch__drug_label", curie=RDID.curie('drug_label'),
-                   model_uri=RDID.drugResearch__drug_label, domain=None, range=str)
-
-slots.drugResearch__evidence = Slot(uri=RDID.evidence, name="drugResearch__evidence", curie=RDID.curie('evidence'),
-                   model_uri=RDID.drugResearch__evidence, domain=None, range=Optional[Union[Union[dict, Evidence], list[Union[dict, Evidence]]]])
-
-slots.evidence__source_type = Slot(uri=RDID.source_type, name="evidence__source_type", curie=RDID.curie('source_type'),
-                   model_uri=RDID.evidence__source_type, domain=None, range=Optional[Union[str, "SourceTypeEnum"]])
-
-slots.evidence__reference = Slot(uri=RDID.reference, name="evidence__reference", curie=RDID.curie('reference'),
-                   model_uri=RDID.evidence__reference, domain=None, range=Optional[str])
-
-slots.evidence__interpreted_text = Slot(uri=RDID.interpreted_text, name="evidence__interpreted_text", curie=RDID.curie('interpreted_text'),
-                   model_uri=RDID.evidence__interpreted_text, domain=None, range=Optional[str])
-
-slots.evidence__confidence = Slot(uri=RDID.confidence, name="evidence__confidence", curie=RDID.curie('confidence'),
-                   model_uri=RDID.evidence__confidence, domain=None, range=Optional[Union[str, "ConfidenceEnum"]])
-
-slots.evidence__evidence_source = Slot(uri=RDID.evidence_source, name="evidence__evidence_source", curie=RDID.curie('evidence_source'),
-                   model_uri=RDID.evidence__evidence_source, domain=None, range=Optional[Union[str, "EvidenceSourceEnum"]])
+                   model_uri=RDID.rareDisease__research, domain=None, range=Optional[Union[Union[dict, DrugAssociation], list[Union[dict, DrugAssociation]]]])
 
