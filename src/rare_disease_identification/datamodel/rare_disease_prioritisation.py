@@ -1,5 +1,5 @@
 # Auto generated from rare_disease_prioritisation.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-05-07T23:09:59
+# Generation date: 2026-09-09T16:14:11
 # Schema: rare_disease_prioritisation
 #
 # id: https://w3id.org/rare-disease-identification
@@ -56,7 +56,7 @@ from rdflib import (
     URIRef
 )
 
-from linkml_runtime.linkml_model.types import Boolean, Float, String
+from linkml_runtime.linkml_model.types import Boolean, Float, Integer, String
 from linkml_runtime.utils.metamodelcore import Bool
 
 metamodel_version = "1.7.0"
@@ -179,6 +179,40 @@ class Curator(YAMLRoot):
 
 
 @dataclass(repr=False)
+class AggregateConfidence(YAMLRoot):
+    """
+    MeDIC's rolled-up confidence for a whole drug-disease association, combining the per-assertion confidences across
+    every source that produced the assertion.
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RDID["AggregateConfidence"]
+    class_class_curie: ClassVar[str] = "rdid:AggregateConfidence"
+    class_name: ClassVar[str] = "AggregateConfidence"
+    class_model_uri: ClassVar[URIRef] = RDID.AggregateConfidence
+
+    method: Optional[str] = None
+    overall: Optional[float] = None
+    n_assertions: Optional[int] = None
+    n_sources: Optional[int] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self.method is not None and not isinstance(self.method, str):
+            self.method = str(self.method)
+
+        if self.overall is not None and not isinstance(self.overall, float):
+            self.overall = float(self.overall)
+
+        if self.n_assertions is not None and not isinstance(self.n_assertions, int):
+            self.n_assertions = int(self.n_assertions)
+
+        if self.n_sources is not None and not isinstance(self.n_sources, int):
+            self.n_sources = int(self.n_sources)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
 class RegulatoryStatus(YAMLRoot):
     """
     A regulatory market-authorisation record for a drug-disease relationship, recorded per authority. Multiple
@@ -196,6 +230,10 @@ class RegulatoryStatus(YAMLRoot):
     approval_date: Optional[str] = None
     source_role: Optional[Union[str, "SourceRoleEnum"]] = None
     regulatory_document_url: Optional[str] = None
+    source: Optional[str] = None
+    source_document_url: Optional[str] = None
+    setid: Optional[str] = None
+    product_id: Optional[str] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self.authority is not None and not isinstance(self.authority, RegulatoryAuthorityEnum):
@@ -212,6 +250,18 @@ class RegulatoryStatus(YAMLRoot):
 
         if self.regulatory_document_url is not None and not isinstance(self.regulatory_document_url, str):
             self.regulatory_document_url = str(self.regulatory_document_url)
+
+        if self.source is not None and not isinstance(self.source, str):
+            self.source = str(self.source)
+
+        if self.source_document_url is not None and not isinstance(self.source_document_url, str):
+            self.source_document_url = str(self.source_document_url)
+
+        if self.setid is not None and not isinstance(self.setid, str):
+            self.setid = str(self.setid)
+
+        if self.product_id is not None and not isinstance(self.product_id, str):
+            self.product_id = str(self.product_id)
 
         super().__post_init__(**kwargs)
 
@@ -234,6 +284,14 @@ class Evidence(YAMLRoot):
     jurisdiction: Optional[str] = None
     reference: Optional[str] = None
     reference_title: Optional[str] = None
+    page_or_section: Optional[str] = None
+    source_document_url: Optional[str] = None
+    original_drug_label: Optional[str] = None
+    original_drug_id: Optional[str] = None
+    original_disease_label: Optional[str] = None
+    setid: Optional[str] = None
+    document_id: Optional[str] = None
+    product_id: Optional[str] = None
     snippet: Optional[str] = None
     explanation: Optional[str] = None
     support: Optional[str] = None
@@ -265,6 +323,30 @@ class Evidence(YAMLRoot):
 
         if self.reference_title is not None and not isinstance(self.reference_title, str):
             self.reference_title = str(self.reference_title)
+
+        if self.page_or_section is not None and not isinstance(self.page_or_section, str):
+            self.page_or_section = str(self.page_or_section)
+
+        if self.source_document_url is not None and not isinstance(self.source_document_url, str):
+            self.source_document_url = str(self.source_document_url)
+
+        if self.original_drug_label is not None and not isinstance(self.original_drug_label, str):
+            self.original_drug_label = str(self.original_drug_label)
+
+        if self.original_drug_id is not None and not isinstance(self.original_drug_id, str):
+            self.original_drug_id = str(self.original_drug_id)
+
+        if self.original_disease_label is not None and not isinstance(self.original_disease_label, str):
+            self.original_disease_label = str(self.original_disease_label)
+
+        if self.setid is not None and not isinstance(self.setid, str):
+            self.setid = str(self.setid)
+
+        if self.document_id is not None and not isinstance(self.document_id, str):
+            self.document_id = str(self.document_id)
+
+        if self.product_id is not None and not isinstance(self.product_id, str):
+            self.product_id = str(self.product_id)
 
         if self.snippet is not None and not isinstance(self.snippet, str):
             self.snippet = str(self.snippet)
@@ -321,7 +403,10 @@ class DrugAssociation(YAMLRoot):
     drug_label: str = None
     drug_id: Optional[str] = None
     relationship_type: Optional[Union[str, "RelationshipTypeEnum"]] = None
-    indications_text: Optional[str] = None
+    reliability: Optional[Union[str, "ConfidenceEnum"]] = None
+    confidence: Optional[Union[dict, AggregateConfidence]] = None
+    is_allergen: Optional[Union[bool, Bool]] = None
+    is_diagnostic_agent: Optional[Union[bool, Bool]] = None
     regulatory_status: Optional[Union[Union[dict, RegulatoryStatus], list[Union[dict, RegulatoryStatus]]]] = empty_list()
     curation_status: Optional[Union[str, "CurationStatusEnum"]] = None
     curation_date: Optional[str] = None
@@ -342,8 +427,17 @@ class DrugAssociation(YAMLRoot):
         if self.relationship_type is not None and not isinstance(self.relationship_type, RelationshipTypeEnum):
             self.relationship_type = RelationshipTypeEnum(self.relationship_type)
 
-        if self.indications_text is not None and not isinstance(self.indications_text, str):
-            self.indications_text = str(self.indications_text)
+        if self.reliability is not None and not isinstance(self.reliability, ConfidenceEnum):
+            self.reliability = ConfidenceEnum(self.reliability)
+
+        if self.confidence is not None and not isinstance(self.confidence, AggregateConfidence):
+            self.confidence = AggregateConfidence(**as_dict(self.confidence))
+
+        if self.is_allergen is not None and not isinstance(self.is_allergen, Bool):
+            self.is_allergen = Bool(self.is_allergen)
+
+        if self.is_diagnostic_agent is not None and not isinstance(self.is_diagnostic_agent, Bool):
+            self.is_diagnostic_agent = Bool(self.is_diagnostic_agent)
 
         if not isinstance(self.regulatory_status, list):
             self.regulatory_status = [self.regulatory_status] if self.regulatory_status is not None else []
@@ -605,6 +699,9 @@ class RegulatoryAuthorityEnum(EnumDefinitionImpl):
     PMDA = PermissibleValue(
         text="PMDA",
         description="Japan Pharmaceuticals and Medical Devices Agency")
+    CDSCO = PermissibleValue(
+        text="CDSCO",
+        description="India Central Drugs Standard Control Organisation")
     OTHER = PermissibleValue(
         text="OTHER",
         description="Other regulator")
@@ -786,6 +883,18 @@ slots.curator__curator_type = Slot(uri=RDID.curator_type, name="curator__curator
 slots.curator__curator_id = Slot(uri=RDID.curator_id, name="curator__curator_id", curie=RDID.curie('curator_id'),
                    model_uri=RDID.curator__curator_id, domain=None, range=Optional[str])
 
+slots.aggregateConfidence__method = Slot(uri=RDID.method, name="aggregateConfidence__method", curie=RDID.curie('method'),
+                   model_uri=RDID.aggregateConfidence__method, domain=None, range=Optional[str])
+
+slots.aggregateConfidence__overall = Slot(uri=RDID.overall, name="aggregateConfidence__overall", curie=RDID.curie('overall'),
+                   model_uri=RDID.aggregateConfidence__overall, domain=None, range=Optional[float])
+
+slots.aggregateConfidence__n_assertions = Slot(uri=RDID.n_assertions, name="aggregateConfidence__n_assertions", curie=RDID.curie('n_assertions'),
+                   model_uri=RDID.aggregateConfidence__n_assertions, domain=None, range=Optional[int])
+
+slots.aggregateConfidence__n_sources = Slot(uri=RDID.n_sources, name="aggregateConfidence__n_sources", curie=RDID.curie('n_sources'),
+                   model_uri=RDID.aggregateConfidence__n_sources, domain=None, range=Optional[int])
+
 slots.regulatoryStatus__authority = Slot(uri=RDID.authority, name="regulatoryStatus__authority", curie=RDID.curie('authority'),
                    model_uri=RDID.regulatoryStatus__authority, domain=None, range=Optional[Union[str, "RegulatoryAuthorityEnum"]])
 
@@ -800,6 +909,18 @@ slots.regulatoryStatus__source_role = Slot(uri=RDID.source_role, name="regulator
 
 slots.regulatoryStatus__regulatory_document_url = Slot(uri=RDID.regulatory_document_url, name="regulatoryStatus__regulatory_document_url", curie=RDID.curie('regulatory_document_url'),
                    model_uri=RDID.regulatoryStatus__regulatory_document_url, domain=None, range=Optional[str])
+
+slots.regulatoryStatus__source = Slot(uri=RDID.source, name="regulatoryStatus__source", curie=RDID.curie('source'),
+                   model_uri=RDID.regulatoryStatus__source, domain=None, range=Optional[str])
+
+slots.regulatoryStatus__source_document_url = Slot(uri=RDID.source_document_url, name="regulatoryStatus__source_document_url", curie=RDID.curie('source_document_url'),
+                   model_uri=RDID.regulatoryStatus__source_document_url, domain=None, range=Optional[str])
+
+slots.regulatoryStatus__setid = Slot(uri=RDID.setid, name="regulatoryStatus__setid", curie=RDID.curie('setid'),
+                   model_uri=RDID.regulatoryStatus__setid, domain=None, range=Optional[str])
+
+slots.regulatoryStatus__product_id = Slot(uri=RDID.product_id, name="regulatoryStatus__product_id", curie=RDID.curie('product_id'),
+                   model_uri=RDID.regulatoryStatus__product_id, domain=None, range=Optional[str])
 
 slots.evidence__source = Slot(uri=RDID.source, name="evidence__source", curie=RDID.curie('source'),
                    model_uri=RDID.evidence__source, domain=None, range=Optional[Union[dict, Source]])
@@ -818,6 +939,30 @@ slots.evidence__reference = Slot(uri=RDID.reference, name="evidence__reference",
 
 slots.evidence__reference_title = Slot(uri=RDID.reference_title, name="evidence__reference_title", curie=RDID.curie('reference_title'),
                    model_uri=RDID.evidence__reference_title, domain=None, range=Optional[str])
+
+slots.evidence__page_or_section = Slot(uri=RDID.page_or_section, name="evidence__page_or_section", curie=RDID.curie('page_or_section'),
+                   model_uri=RDID.evidence__page_or_section, domain=None, range=Optional[str])
+
+slots.evidence__source_document_url = Slot(uri=RDID.source_document_url, name="evidence__source_document_url", curie=RDID.curie('source_document_url'),
+                   model_uri=RDID.evidence__source_document_url, domain=None, range=Optional[str])
+
+slots.evidence__original_drug_label = Slot(uri=RDID.original_drug_label, name="evidence__original_drug_label", curie=RDID.curie('original_drug_label'),
+                   model_uri=RDID.evidence__original_drug_label, domain=None, range=Optional[str])
+
+slots.evidence__original_drug_id = Slot(uri=RDID.original_drug_id, name="evidence__original_drug_id", curie=RDID.curie('original_drug_id'),
+                   model_uri=RDID.evidence__original_drug_id, domain=None, range=Optional[str])
+
+slots.evidence__original_disease_label = Slot(uri=RDID.original_disease_label, name="evidence__original_disease_label", curie=RDID.curie('original_disease_label'),
+                   model_uri=RDID.evidence__original_disease_label, domain=None, range=Optional[str])
+
+slots.evidence__setid = Slot(uri=RDID.setid, name="evidence__setid", curie=RDID.curie('setid'),
+                   model_uri=RDID.evidence__setid, domain=None, range=Optional[str])
+
+slots.evidence__document_id = Slot(uri=RDID.document_id, name="evidence__document_id", curie=RDID.curie('document_id'),
+                   model_uri=RDID.evidence__document_id, domain=None, range=Optional[str])
+
+slots.evidence__product_id = Slot(uri=RDID.product_id, name="evidence__product_id", curie=RDID.curie('product_id'),
+                   model_uri=RDID.evidence__product_id, domain=None, range=Optional[str])
 
 slots.evidence__snippet = Slot(uri=RDID.snippet, name="evidence__snippet", curie=RDID.curie('snippet'),
                    model_uri=RDID.evidence__snippet, domain=None, range=Optional[str])
@@ -864,8 +1009,17 @@ slots.drugAssociation__drug_label = Slot(uri=RDID.drug_label, name="drugAssociat
 slots.drugAssociation__relationship_type = Slot(uri=RDID.relationship_type, name="drugAssociation__relationship_type", curie=RDID.curie('relationship_type'),
                    model_uri=RDID.drugAssociation__relationship_type, domain=None, range=Optional[Union[str, "RelationshipTypeEnum"]])
 
-slots.drugAssociation__indications_text = Slot(uri=RDID.indications_text, name="drugAssociation__indications_text", curie=RDID.curie('indications_text'),
-                   model_uri=RDID.drugAssociation__indications_text, domain=None, range=Optional[str])
+slots.drugAssociation__reliability = Slot(uri=RDID.reliability, name="drugAssociation__reliability", curie=RDID.curie('reliability'),
+                   model_uri=RDID.drugAssociation__reliability, domain=None, range=Optional[Union[str, "ConfidenceEnum"]])
+
+slots.drugAssociation__confidence = Slot(uri=RDID.confidence, name="drugAssociation__confidence", curie=RDID.curie('confidence'),
+                   model_uri=RDID.drugAssociation__confidence, domain=None, range=Optional[Union[dict, AggregateConfidence]])
+
+slots.drugAssociation__is_allergen = Slot(uri=RDID.is_allergen, name="drugAssociation__is_allergen", curie=RDID.curie('is_allergen'),
+                   model_uri=RDID.drugAssociation__is_allergen, domain=None, range=Optional[Union[bool, Bool]])
+
+slots.drugAssociation__is_diagnostic_agent = Slot(uri=RDID.is_diagnostic_agent, name="drugAssociation__is_diagnostic_agent", curie=RDID.curie('is_diagnostic_agent'),
+                   model_uri=RDID.drugAssociation__is_diagnostic_agent, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.drugAssociation__regulatory_status = Slot(uri=RDID.regulatory_status, name="drugAssociation__regulatory_status", curie=RDID.curie('regulatory_status'),
                    model_uri=RDID.drugAssociation__regulatory_status, domain=None, range=Optional[Union[Union[dict, RegulatoryStatus], list[Union[dict, RegulatoryStatus]]]])

@@ -167,6 +167,25 @@ classes:
         range: string
         description: Stable identifier (URL, ORCID, etc.) for the curator.
 
+  AggregateConfidence:
+    description: >-
+      MeDIC's rolled-up confidence for a whole drug-disease association,
+      combining the per-assertion confidences across every source that
+      produced the assertion.
+    attributes:
+      method:
+        range: string
+        description: Combination method used to roll up the assertions (e.g. NOISY_OR).
+      overall:
+        range: float
+        description: Combined confidence in the association, 0-1.
+      n_assertions:
+        range: integer
+        description: Number of individual assertions rolled up.
+      n_sources:
+        range: integer
+        description: Number of distinct source documents the assertions came from.
+
   RegulatoryStatus:
     description: >-
       A regulatory market-authorisation record for a drug-disease relationship,
@@ -205,12 +224,9 @@ classes:
       setid:
         range: string
         description: DailyMed SPL setid (FDA records sourced from DailyMed).
-      application_number:
+      product_id:
         range: string
-        description: FDA NDA application number (Orange Book / Drugs@FDA records).
-      bla_number:
-        range: string
-        description: FDA BLA number (Purple Book records).
+        description: Source-side product identifier, when the source carries one.
 
   EvidenceItem:
     description: >-
@@ -262,18 +278,15 @@ classes:
         description: >-
           Disease label as it appeared in the source before grounding to a MONDO
           term (e.g. "invasive aspergillosis").
-      original_disease_id:
-        range: string
-        description: Source-side disease identifier when present.
       setid:
         range: string
         description: DailyMed SPL setid (FDA DailyMed evidence rows).
-      application_number:
+      document_id:
         range: string
-        description: FDA NDA application number (Orange Book / Drugs@FDA evidence rows).
-      bla_number:
+        description: Source-side document identifier for the artefact the assertion came from.
+      product_id:
         range: string
-        description: FDA BLA number (Purple Book evidence rows).
+        description: Source-side product identifier, when the source carries one.
       support:
         range: string
         description: Whether evidence supports or refutes (SUPPORT, REFUTE, PARTIAL, NO_EVIDENCE).
@@ -324,11 +337,24 @@ classes:
       relationship_type:
         range: RelationshipTypeEnum
         description: Relationship modality (INDICATION, CONTRAINDICATION, RESEARCH, ...).
-      indications_text:
-        range: string
+      reliability:
+        range: ConfidenceEnum
         description: >-
-          Verbatim indications / contraindications block from the drug label,
-          when available.
+          MeDIC's banded reliability for the association as a whole (HIGH,
+          MEDIUM, LOW), derived from the aggregate confidence.
+      confidence:
+        range: AggregateConfidence
+        inlined: true
+        description: Rolled-up confidence across all assertions for this association.
+      is_allergen:
+        range: boolean
+        description: >-
+          Whether the association reflects an allergy/hypersensitivity to the
+          drug rather than a therapeutic relationship. Mostly set on
+          contraindications.
+      is_diagnostic_agent:
+        range: boolean
+        description: Whether the drug is a diagnostic agent rather than a therapeutic.
       regulatory_status:
         range: RegulatoryStatus
         multivalued: true

@@ -72,6 +72,8 @@ enums:
         description: European Medicines Agency
       PMDA:
         description: Japan Pharmaceuticals and Medical Devices Agency
+      CDSCO:
+        description: India Central Drugs Standard Control Organisation
       OTHER:
         description: Other regulator
 
@@ -197,6 +199,25 @@ classes:
         range: string
         description: Stable identifier (URL, ORCID, etc.) for the curator.
 
+  AggregateConfidence:
+    description: >-
+      MeDIC's rolled-up confidence for a whole drug-disease association,
+      combining the per-assertion confidences across every source that
+      produced the assertion.
+    attributes:
+      method:
+        range: string
+        description: Combination method used to roll up the assertions (e.g. NOISY_OR).
+      overall:
+        range: float
+        description: Combined confidence in the association, 0-1.
+      n_assertions:
+        range: integer
+        description: Number of individual assertions rolled up.
+      n_sources:
+        range: integer
+        description: Number of distinct source documents the assertions came from.
+
   RegulatoryStatus:
     description: >-
       A regulatory market-authorisation record for a drug-disease relationship,
@@ -217,6 +238,20 @@ classes:
       regulatory_document_url:
         range: string
         description: URL to the underlying regulatory document.
+      source:
+        range: string
+        description: >-
+          Source artefact that produced this record (DAILYMED, EMA_EPAR, PMDA,
+          CDSCO). Disambiguates multiple records under one authority.
+      source_document_url:
+        range: string
+        description: URL to the source document itself (PDF when available).
+      setid:
+        range: string
+        description: DailyMed SPL setid (FDA records sourced from DailyMed).
+      product_id:
+        range: string
+        description: Source-side product identifier, when the source carries one.
 
   Evidence:
     description: >-
@@ -241,6 +276,30 @@ classes:
       reference_title:
         range: string
         description: Title of the referenced document.
+      page_or_section:
+        range: string
+        description: Page range or section identifier within the referenced document.
+      source_document_url:
+        range: string
+        description: URL to the actual source document (PDF when available).
+      original_drug_label:
+        range: string
+        description: Drug label as it appeared in the source before grounding to a CURIE.
+      original_drug_id:
+        range: string
+        description: Source-side drug identifier when the source carries one.
+      original_disease_label:
+        range: string
+        description: Disease label as it appeared in the source before grounding to MONDO.
+      setid:
+        range: string
+        description: DailyMed SPL setid (FDA DailyMed evidence rows).
+      document_id:
+        range: string
+        description: Source-side document identifier for the artefact the assertion came from.
+      product_id:
+        range: string
+        description: Source-side product identifier, when the source carries one.
       snippet:
         range: string
         description: Exact quote from the source document.
@@ -297,11 +356,24 @@ classes:
       relationship_type:
         range: RelationshipTypeEnum
         description: Relationship modality (INDICATION, CONTRAINDICATION, RESEARCH, ...).
-      indications_text:
-        range: string
+      reliability:
+        range: ConfidenceEnum
         description: >-
-          Verbatim indications / contraindications block from the drug label,
-          when available.
+          MeDIC's banded reliability for the association as a whole (HIGH,
+          MEDIUM, LOW), derived from the aggregate confidence.
+      confidence:
+        range: AggregateConfidence
+        inlined: true
+        description: Rolled-up confidence across all assertions for this association.
+      is_allergen:
+        range: boolean
+        description: >-
+          Whether the association reflects an allergy/hypersensitivity to the
+          drug rather than a therapeutic relationship. Mostly set on
+          contraindications.
+      is_diagnostic_agent:
+        range: boolean
+        description: Whether the drug is a diagnostic agent rather than a therapeutic.
       regulatory_status:
         range: RegulatoryStatus
         multivalued: true
