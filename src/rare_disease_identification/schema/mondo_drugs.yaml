@@ -4,7 +4,7 @@ title: Mondo Drugs Report Schema
 description: >-
   Disease-centric aggregation of drug associations from the MeDIC knowledge base.
   Each disease record collects indications, contraindications, adverse events, and
-  research associations.
+  research associations with their regulatory and curation metadata.
 
 imports:
   - linkml:types
@@ -17,64 +17,344 @@ prefixes:
 
 default_prefix: rdid
 
+enums:
+  RelationshipTypeEnum:
+    description: Type of drug-disease relationship.
+    permissible_values:
+      INDICATION:
+        description: Drug is indicated for the disease
+      CONTRAINDICATION:
+        description: Drug is contraindicated for the disease
+      ADVERSE_EVENT:
+        description: Drug is associated with an adverse event in the context of the disease
+      RESEARCH:
+        description: Drug is investigated for the disease (research / off-label)
+
+  SourceRoleEnum:
+    description: >-
+      Whether a source is the primary canonical evidence record for an
+      assertion (e.g. official EMA EPAR) or an intermediary source (e.g. a
+      DailyMed label that mirrors the FDA approval).
+    permissible_values:
+      PRIMARY:
+        description: Primary canonical source for the assertion
+      INTERMEDIARY:
+        description: Intermediary source repeating or fallback to a primary source
+
+  RegulatoryAuthorityEnum:
+    description: Regulatory authority granting approval / market authorisation.
+    permissible_values:
+      FDA:
+        description: U.S. Food and Drug Administration
+      EMA:
+        description: European Medicines Agency
+      PMDA:
+        description: Japan Pharmaceuticals and Medical Devices Agency
+      CDSCO:
+        description: Central Drugs Standard Control Organization (India)
+      MOH_RUSSIA:
+        description: Ministry of Health (Russia) — GRLS register
+      OTHER:
+        description: Other regulator
+
+  RegulatoryStatusEnum:
+    description: Regulatory approval status.
+    permissible_values:
+      APPROVED:
+        description: Approved for marketing
+      WITHDRAWN:
+        description: Approval withdrawn
+      DISCONTINUED:
+        description: Discontinued
+      INVESTIGATIONAL:
+        description: Under investigation
+      OFF_LABEL:
+        description: Used off-label
+
+  CurationStatusEnum:
+    description: Curation lifecycle status of a drug-disease association.
+    permissible_values:
+      DRAFT:
+        description: Draft / unreviewed
+      IN_REVIEW:
+        description: Under expert review
+      APPROVED:
+        description: Curator-approved
+      REJECTED:
+        description: Curator-rejected
+
+  CuratorTypeEnum:
+    description: Type of curator that produced an evidence record.
+    permissible_values:
+      AI_AGENT:
+        description: AI agent (LLM-based or other)
+      PIPELINE:
+        description: Automated extraction pipeline
+      HUMAN:
+        description: Human curator
+
+  ConfidenceEnum:
+    description: Confidence level for an evidence record.
+    permissible_values:
+      HIGH:
+        description: High confidence
+      MEDIUM:
+        description: Medium confidence
+      LOW:
+        description: Low confidence
+
+  SourceTypeEnum:
+    description: Broad category of evidence source.
+    permissible_values:
+      REGULATORY:
+        description: Regulatory agency document (label, EPAR, etc.)
+      LITERATURE:
+        description: Published literature (PMID, PMC, journal article)
+      GUIDELINE:
+        description: Clinical practice guideline
+      DATABASE:
+        description: Curated database or registry
+      POST_MARKET:
+        description: Post-market surveillance / real-world evidence
+
+  EvidenceSourceEnum:
+    description: Provenance of the underlying evidence.
+    permissible_values:
+      HUMAN_CLINICAL:
+        description: Human clinical evidence (trial, case report)
+      MODEL_ORGANISM:
+        description: Animal / model organism evidence
+      IN_VITRO:
+        description: In vitro / cell-based evidence
+      COMPUTATIONAL:
+        description: Computational / in silico evidence
+      OTHER:
+        description: Other / unspecified provenance
+
 classes:
+  Source:
+    description: A description of the source from which evidence was extracted.
+    attributes:
+      name:
+        range: string
+        description: Human-readable source name (e.g. "FDA DailyMed", "EMA EPAR", "PMDA").
+      type:
+        range: SourceTypeEnum
+        description: Broad category of source.
+      jurisdiction:
+        range: string
+        description: Regulatory jurisdiction (USA, EU, JAPAN, INTERNATIONAL, etc.)
+      url:
+        range: string
+        description: URL for the source document or search.
+      description:
+        range: string
+        description: Description of the source provenance.
+      file:
+        range: string
+        description: Path to the source file (when available).
+
+  Curator:
+    description: The agent (human, pipeline or AI) that produced the evidence record.
+    attributes:
+      name:
+        range: string
+        description: Human-readable name of the curator.
+      curator_type:
+        range: CuratorTypeEnum
+        description: Type of curator (AI_AGENT, PIPELINE, HUMAN).
+      curator_id:
+        range: string
+        description: Stable identifier (URL, ORCID, etc.) for the curator.
+
+  RegulatoryStatus:
+    description: >-
+      A regulatory market-authorisation record for a drug-disease relationship,
+      recorded per authority. Multiple statuses can coexist (FDA, EMA, PMDA).
+      Multiple records per authority are also possible (e.g. an FDA drug may
+      have a DailyMed label record, an Orange Book NDA record, and a Purple
+      Book BLA record).
+    attributes:
+      authority:
+        range: RegulatoryAuthorityEnum
+        description: Regulatory authority that issued the status.
+      source:
+        range: string
+        description: >-
+          Source artefact that produced this record (e.g. DAILYMED, ORANGEBOOK,
+          PURPLEBOOK, EMA_EPAR, GRLS, PMDA_REVIEW). Disambiguates multi-row
+          authorities.
+      status:
+        range: RegulatoryStatusEnum
+        description: Approval status with this authority.
+      approval_date:
+        range: string
+        description: Approval date (ISO 8601 YYYY-MM-DD when known).
+      source_role:
+        range: SourceRoleEnum
+        description: Whether this record is primary or intermediary.
+      regulatory_document_url:
+        range: string
+        description: URL to the underlying regulatory document (record/landing page).
+      source_document_url:
+        range: string
+        description: >-
+          URL to the actual source document (PDF when available — SPL PDF,
+          assessment-report PDF, review-report PDF). Falls back to empty
+          when no per-record document exists.
+      setid:
+        range: string
+        description: DailyMed SPL setid (FDA records sourced from DailyMed).
+      application_number:
+        range: string
+        description: FDA NDA application number (Orange Book / Drugs@FDA records).
+      bla_number:
+        range: string
+        description: FDA BLA number (Purple Book records).
+
   EvidenceItem:
     description: >-
       A single piece of evidence supporting or refuting a drug-disease association.
     attributes:
+      source:
+        range: Source
+        inlined: true
+        description: Structured description of the source.
       source_type:
-        range: string
-        description: Type of source (REGULATORY, LITERATURE, GUIDELINE, DATABASE, POST_MARKET)
+        range: SourceTypeEnum
+        description: Broad type of source (kept as a flat field for compatibility).
+      source_role:
+        range: SourceRoleEnum
+        description: Primary canonical source vs intermediary fallback.
       jurisdiction:
         range: string
-        description: Regulatory jurisdiction (USA, EU, JAPAN, INDIA, RUSSIA, CHINA, INTERNATIONAL)
+        description: Regulatory jurisdiction (USA, EU, JAPAN, INTERNATIONAL, ...).
       reference:
         range: string
-        description: >-
-          Reference identifier (PMID:12345, DailyMed:xxx, NCT:xxx, or URL)
+        description: Reference identifier (PMID, PMC, NCT, DailyMed ID, URL, ...).
       reference_title:
         range: string
-        description: Title of the referenced document
+        description: Title of the referenced document.
+      page_or_section:
+        range: string
+        description: Page range or section identifier within the referenced document.
+      source_document_url:
+        range: string
+        description: URL to the actual source document (PDF when available).
       snippet:
         range: string
-        description: Exact quote from the source document
+        description: Exact quote from the source document.
       explanation:
         range: string
-        description: How this evidence supports or refutes the drug-disease association
+        description: How this evidence supports or refutes the drug-disease association.
+      original_drug_label:
+        range: string
+        description: >-
+          Drug label as it appeared in the source before grounding to a CURIE
+          (e.g. "VORICONAZOLE", "Alpha-1-proteinase inhibitor").
+      original_drug_id:
+        range: string
+        description: >-
+          Source-side drug identifier when the source carries one (e.g. PMDA YJ
+          code, EMA active substance code).
+      original_disease_label:
+        range: string
+        description: >-
+          Disease label as it appeared in the source before grounding to a MONDO
+          term (e.g. "invasive aspergillosis").
+      original_disease_id:
+        range: string
+        description: Source-side disease identifier when present.
+      setid:
+        range: string
+        description: DailyMed SPL setid (FDA DailyMed evidence rows).
+      application_number:
+        range: string
+        description: FDA NDA application number (Orange Book / Drugs@FDA evidence rows).
+      bla_number:
+        range: string
+        description: FDA BLA number (Purple Book evidence rows).
       support:
         range: string
-        description: Whether evidence supports or refutes (SUPPORT, REFUTE, PARTIAL, NO_EVIDENCE)
+        description: Whether evidence supports or refutes (SUPPORT, REFUTE, PARTIAL, NO_EVIDENCE).
       confidence:
-        range: string
-        description: Confidence level (HIGH, MEDIUM, LOW)
+        range: ConfidenceEnum
+        description: Overall confidence level.
+      confidence_drug:
+        range: ConfidenceEnum
+        description: Confidence in drug grounding.
+      confidence_disease:
+        range: ConfidenceEnum
+        description: Confidence in disease grounding.
+      confidence_association:
+        range: ConfidenceEnum
+        description: Confidence in the drug-disease association.
       evidence_source:
-        range: string
-        description: Provenance (HUMAN_CLINICAL, MODEL_ORGANISM, IN_VITRO, COMPUTATIONAL, OTHER)
+        range: EvidenceSourceEnum
+        description: Provenance category (HUMAN_CLINICAL, MODEL_ORGANISM, etc.).
       approval_status:
+        range: RegulatoryStatusEnum
+        description: Clinical / regulatory approval status conveyed by this evidence.
+      approval_date:
         range: string
-        description: Clinical approval status (APPROVED, INVESTIGATIONAL, WITHDRAWN, DISCONTINUED, OFF_LABEL)
+        description: Approval date attached to this evidence (ISO 8601 YYYY-MM-DD when known).
       max_research_phase:
         range: string
-        description: Maximum research phase (PRE_CLINICAL, PHASE_I-IV, CASE_REPORT, IN_VITRO, COMPUTATIONAL)
+        description: Maximum research phase (PRE_CLINICAL, PHASE_I-IV, CASE_REPORT, ...).
+      curator:
+        range: Curator
+        inlined: true
+        description: Curator that produced this evidence record.
 
   DrugAssociation:
     description: >-
-      A drug associated with a disease in a specific modality, carrying evidence.
+      A drug associated with a disease in a specific modality, carrying evidence
+      and (for indications/contraindications) regulatory metadata or
+      (for research) curation metadata.
     attributes:
       drug_id:
         range: string
         description: >-
-          Normalized drug identifier (CHEBI CURIE preferred).
-          May be empty for ungrounded drugs.
+          Normalized drug identifier (CHEBI CURIE preferred). May be empty when
+          the drug could not be grounded.
       drug_label:
         range: string
         required: true
-        description: Drug name or label
+        description: Drug name or label.
+      relationship_type:
+        range: RelationshipTypeEnum
+        description: Relationship modality (INDICATION, CONTRAINDICATION, RESEARCH, ...).
+      indications_text:
+        range: string
+        description: >-
+          Verbatim indications / contraindications block from the drug label,
+          when available.
+      regulatory_status:
+        range: RegulatoryStatus
+        multivalued: true
+        inlined_as_list: true
+        description: Per-authority regulatory status records (FDA, EMA, PMDA, ...).
+      curation_status:
+        range: CurationStatusEnum
+        description: Curation lifecycle status (research associations only).
+      curation_date:
+        range: string
+        description: ISO 8601 date when this association was curated.
+      curator:
+        range: Curator
+        inlined: true
+        description: Top-level curator for the association (research associations).
+      deep_research_used:
+        range: boolean
+        description: Whether AI deep research was used to produce the association.
+      notes:
+        range: string
+        description: Free-text curator notes about the association.
       evidence:
         range: EvidenceItem
         multivalued: true
         inlined_as_list: true
-        description: Evidence items supporting this association
+        description: Evidence items supporting this association.
 
   DiseaseRecord:
     description: >-
@@ -83,31 +363,31 @@ classes:
       disease_id:
         range: string
         required: true
-        description: Mondo disease CURIE (e.g. MONDO:0012454)
+        description: Mondo disease CURIE (e.g. MONDO:0012454).
       disease_label:
         range: string
         required: true
-        description: Human-readable disease name
+        description: Human-readable disease name.
       indications:
         range: DrugAssociation
         multivalued: true
         inlined_as_list: true
-        description: Drugs indicated for this disease
+        description: Drugs indicated for this disease.
       contraindications:
         range: DrugAssociation
         multivalued: true
         inlined_as_list: true
-        description: Drugs contraindicated for this disease
+        description: Drugs contraindicated for this disease.
       adverse_events:
         range: DrugAssociation
         multivalued: true
         inlined_as_list: true
-        description: Drugs with reported adverse events relevant to this disease
+        description: Drugs with reported adverse events relevant to this disease.
       research:
         range: DrugAssociation
         multivalued: true
         inlined_as_list: true
-        description: Drug-disease associations from literature research
+        description: Drug-disease associations from literature / research curation.
 
   MondoDrugsReport:
     description: >-
@@ -117,17 +397,17 @@ classes:
       id:
         range: string
         required: true
-        description: Report identifier
+        description: Report identifier.
       title:
         range: string
         required: true
-        description: Report title
+        description: Report title.
       date_created:
         range: string
         required: true
-        description: ISO 8601 date when this report was generated
+        description: ISO 8601 date when this report was generated.
       diseases:
         range: DiseaseRecord
         multivalued: true
         inlined_as_list: true
-        description: All disease records in the report
+        description: All disease records in the report.
