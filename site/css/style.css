@@ -1050,6 +1050,7 @@ footer a:hover { text-decoration: underline; }
 .reg-authority.fda { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
 .reg-authority.ema { background: #fef3c7; color: #92400e; border-color: #fde68a; }
 .reg-authority.pmda { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
+.reg-authority.cdsco { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
 
 /* Badge-tooltip wrapper: lets any badge carry a hover-tooltip without underline */
 .badge-tip {
