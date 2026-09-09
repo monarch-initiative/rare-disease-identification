@@ -18,6 +18,11 @@ from pathlib import Path
 import click
 import yaml
 
+try:  # libyaml bindings, when the wheel provides them
+    from yaml import CSafeLoader as _Loader
+except ImportError:  # pragma: no cover - depends on the installed pyyaml build
+    from yaml import SafeLoader as _Loader
+
 
 class NoAliasDumper(yaml.SafeDumper):
     """YAML dumper that writes all values inline (no anchors/aliases)."""
@@ -111,11 +116,15 @@ def load_priority_diseases(yml_path: Path) -> list[tuple[str, str]]:
 
 
 def load_yaml(path: Path) -> dict:
-    """Load a YAML file, returning empty dict if missing or empty."""
+    """Load a YAML file, returning empty dict if missing or empty.
+
+    The MeDIC product files are large (`indication_list.yaml` is >100MB), so use
+    libyaml's C loader when it is available; the pure-Python loader takes minutes.
+    """
     if not path.exists():
         return {}
     with open(path) as f:
-        data = yaml.safe_load(f)
+        data = yaml.load(f, Loader=_Loader)
     return data if data else {}
 
 
@@ -172,10 +181,9 @@ def build_indication_evidence(ev: dict, drug_label: str) -> dict:
         "original_drug_label": ev.get("original_drug_label") or "",
         "original_drug_id": ev.get("original_drug_id") or "",
         "original_disease_label": ev.get("original_disease_label") or "",
-        "original_disease_id": ev.get("original_disease_id") or "",
         "setid": ev.get("setid") or "",
-        "application_number": ev.get("application_number") or "",
-        "bla_number": ev.get("bla_number") or "",
+        "document_id": ev.get("document_id") or "",
+        "product_id": ev.get("product_id") or "",
         "confidence": confidence,
         # The site UI reads these three; keep them aligned with the single
         # MeDIC `confidence` value until a richer breakdown is available.
@@ -232,29 +240,62 @@ def build_regulatory_status(rs: dict) -> dict:
             "regulatory_document_url": rewrite_dead_url(rs.get("regulatory_document_url") or ""),
             "source_document_url": rs.get("source_document_url") or "",
             "setid": rs.get("setid") or "",
-            "application_number": rs.get("application_number") or "",
-            "bla_number": rs.get("bla_number") or "",
+            "product_id": rs.get("product_id") or "",
+        }
+    )
+
+
+def build_aggregate_confidence(conf: dict | None) -> dict:
+    """Convert MeDIC's association-level rolled-up confidence to our shape."""
+    if not isinstance(conf, dict):
+        return {}
+    return _strip_empty(
+        {
+            "method": conf.get("method") or "",
+            "overall": conf.get("overall"),
+            "n_assertions": conf.get("n_assertions"),
+            "n_sources": conf.get("n_sources"),
         }
     )
 
 
 def build_indication_assoc(assoc: dict) -> dict:
-    """Build a DrugAssociation dict from a MeDIC indication / contraindication row."""
-    drug_id = assoc.get("final_normalized_drug_id") or ""
-    drug_label = assoc.get("final_normalized_drug_label") or ""
-    rel_type = assoc.get("relationship_type") or "INDICATION"
+    """Build a DrugAssociation dict from a MeDIC indication / contraindication row.
 
-    evidence = [build_indication_evidence(ev, drug_label) for ev in assoc.get("evidence") or []]
-    regulatory_status = [build_regulatory_status(rs) for rs in assoc.get("regulatory_status") or []]
+    MeDIC nests one evidence row and one regulatory_status row per *assertion*
+    (a single extraction from a single source document), so both are flattened
+    up to the association here. Assertions drawn from the same label repeat the
+    same regulatory status, so those are de-duplicated on the way out.
+    """
+    drug_label = assoc.get("drug_label") or ""
+
+    evidence = []
+    regulatory_status = []
+    seen_status: set[tuple] = set()
+    for assertion in assoc.get("assertions") or []:
+        ev = assertion.get("evidence")
+        if ev:
+            evidence.append(build_indication_evidence(ev, drug_label))
+        rs = build_regulatory_status(assertion.get("regulatory_status") or {})
+        if rs:
+            key = tuple(sorted(rs.items()))
+            if key not in seen_status:
+                seen_status.add(key)
+                regulatory_status.append(rs)
 
     out: dict = {
         "drug_label": drug_label,
-        "drug_id": drug_id,
-        "relationship_type": rel_type,
-        "indications_text": assoc.get("indications_text") or "",
+        "drug_id": assoc.get("drug_id") or "",
+        "relationship_type": assoc.get("relationship_type") or "INDICATION",
+        "reliability": assoc.get("reliability") or "",
+        "confidence": build_aggregate_confidence(assoc.get("confidence")),
         "regulatory_status": regulatory_status,
         "evidence": evidence,
     }
+    # Booleans are meaningful when False, so only drop them when absent.
+    for flag in ("is_allergen", "is_diagnostic_agent"):
+        if isinstance(assoc.get(flag), bool):
+            out[flag] = assoc[flag]
     return _strip_empty(out)
 
 
@@ -297,7 +338,7 @@ def aggregate_indications(
     """Read indication / contraindication associations and split by disease."""
     data = load_yaml(path)
     for assoc in data.get("associations", []):
-        disease_id = assoc.get("final_normalized_disease_id") or ""
+        disease_id = assoc.get("disease_id") or ""
         if not disease_id:
             continue
         drug_assoc = build_indication_assoc(assoc)
