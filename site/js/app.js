@@ -6,6 +6,12 @@
     var PAGE_SIZE = 25;
     var FEEDBACK_REPO = "monarch-initiative/rare-disease-identification";
 
+    // Display flag: prevalence_per_100k_us values in the source YAML are stored
+    // as proportions despite the field name, and several entries have data-entry
+    // errors. Hide all prevalence renderings until the upstream data is fixed.
+    // Flip to true to re-enable filter, badge, and detail-row.
+    var SHOW_PREVALENCE = false;
+
     var allDiseases = [];
     var filtered = [];
     var currentPage = 1;
@@ -141,8 +147,13 @@
     function buildAllFilters() {
         buildFilterGroup("filter-prioritization", "prioritization",
             function (d) { return d.prioritization_category || "unknown"; }, PRIORITIZATION_LABELS);
-        buildFilterGroup("filter-prevalence", "prevalence",
-            function (d) { return d.prevalence_category || "unknown"; }, PREVALENCE_LABELS);
+        if (SHOW_PREVALENCE) {
+            buildFilterGroup("filter-prevalence", "prevalence",
+                function (d) { return d.prevalence_category || "unknown"; }, PREVALENCE_LABELS);
+        } else {
+            var prevGroup = document.getElementById("prevalence-filter-group");
+            if (prevGroup) prevGroup.style.display = "none";
+        }
         buildFilterGroup("filter-treatments", "treatments", function (d) {
             if (d.indications && d.indications.length > 0) return "has_indications";
             if (d.research && d.research.length > 0) return "has_research";
@@ -225,7 +236,7 @@
                 !activeFilters.prioritization.has(d.prioritization_category || "unknown"))
                 return false;
 
-            if (activeFilters.prevalence.size > 0 &&
+            if (SHOW_PREVALENCE && activeFilters.prevalence.size > 0 &&
                 !activeFilters.prevalence.has(d.prevalence_category || "unknown"))
                 return false;
 
@@ -293,6 +304,7 @@
         var prevLabel = PREVALENCE_LABELS[prevCat] || prevCat;
         var prevClass = prevCat.startsWith("H") ? "prevalence-h" : "prevalence-l";
         var hasIndications = d.indications && d.indications.length > 0;
+        var hasContraindications = d.contraindications && d.contraindications.length > 0;
         var hasResearch = d.research && d.research.length > 0;
 
         var hl = searchQuery ? function (t) { return highlightText(t, searchQuery); } : esc;
@@ -320,11 +332,12 @@
             var prioTip = PRIORITIZATION_TOOLTIPS[prioClass] || "";
             html += renderTooltipTag(prioLabel, prioTip, "tag " + prioClass);
         }
-        if (prevCat) {
+        if (SHOW_PREVALENCE && prevCat) {
             var prevTip = PREVALENCE_TOOLTIPS[prevCat] || "";
             html += renderTooltipTag(prevLabel, prevTip, "tag " + prevClass);
         }
         if (hasIndications) html += '<span class="tag has-indications">Approved Indications</span>';
+        if (hasContraindications) html += '<span class="tag has-contraindications">Contraindications</span>';
         (d.keywords || []).forEach(function (k) {
             html += '<span class="tag keyword">' + esc(k) + '</span>';
         });
@@ -398,7 +411,7 @@
 
         // Detail grid
         html += '<div class="detail-grid">';
-        if (d.prevalence_per_100k_us != null) {
+        if (SHOW_PREVALENCE && d.prevalence_per_100k_us != null) {
             html += '<div class="detail-row"><strong>US Prevalence:</strong> ' +
                 d.prevalence_per_100k_us + ' per 100k</div>';
         }
@@ -450,6 +463,13 @@
             html += renderCollapsibleSection("indications", d.indications,
                 "Approved Indications (" + d.indications.length + ")",
                 renderIndicationEntry, diseaseCtx);
+        }
+
+        // Contraindications section
+        if (hasContraindications) {
+            html += renderCollapsibleSection("contraindications", d.contraindications,
+                "Contraindications (" + d.contraindications.length + ")",
+                renderContraindicationEntry, diseaseCtx);
         }
 
         // Research section
@@ -505,10 +525,65 @@
         return html;
     }
 
+    // Tooltip explanations for evidence-card badges. Hover any badge → see what the value means.
+    var APPROVAL_STATUS_TIPS = {
+        APPROVED: "Drug is approved by this regulator for the indication.",
+        WITHDRAWN: "Approval was granted and later withdrawn.",
+        DISCONTINUED: "Drug is discontinued.",
+        INVESTIGATIONAL: "Drug is under investigation; no approval yet.",
+        OFF_LABEL: "Use is off-label (not in the approved indications)."
+    };
+    var SOURCE_ROLE_TIPS = {
+        PRIMARY: "Primary canonical source for this assertion (e.g. official EPAR or BLA record).",
+        INTERMEDIARY: "Intermediary or fallback source repeating a primary source (e.g. a DailyMed label mirroring the FDA approval)."
+    };
+    var EVIDENCE_SOURCE_TIPS = {
+        HUMAN_CLINICAL: "Evidence from human clinical data (trial, case report).",
+        MODEL_ORGANISM: "Evidence from animal / model organism studies.",
+        IN_VITRO: "Evidence from in vitro / cell-based studies.",
+        COMPUTATIONAL: "Evidence from computational / in silico analyses.",
+        OTHER: "Other or unspecified provenance."
+    };
+    var SUPPORT_TIPS = {
+        SUPPORT: "Evidence supports the assertion.",
+        REFUTE: "Evidence refutes the assertion.",
+        PARTIAL: "Evidence partially supports the assertion.",
+        NO_EVIDENCE: "No evidence either way."
+    };
+    var SOURCE_TYPE_TIPS = {
+        REGULATORY: "Regulatory agency document (drug label, EPAR, etc.).",
+        LITERATURE: "Published literature (PMID, PMC, journal article).",
+        GUIDELINE: "Clinical practice guideline.",
+        DATABASE: "Curated database or registry.",
+        POST_MARKET: "Post-market surveillance / real-world evidence."
+    };
+    var CONFIDENCE_LEVELS = { HIGH: "HIGH", MEDIUM: "MEDIUM", LOW: "LOW" };
+    var AUTHORITY_TIPS = {
+        FDA: "U.S. Food and Drug Administration",
+        EMA: "European Medicines Agency",
+        PMDA: "Japan Pharmaceuticals and Medical Devices Agency",
+        CDSCO: "Central Drugs Standard Control Organisation (India)",
+        MOH_RUSSIA: "Ministry of Health of the Russian Federation",
+        NMPA_CHINA: "National Medical Products Administration (China)",
+        OTHER: "Other regulator"
+    };
+    var CURATION_STATUS_TIPS = {
+        DRAFT: "Draft / unreviewed by a human curator.",
+        IN_REVIEW: "Currently under expert review.",
+        APPROVED: "Curator-approved.",
+        REJECTED: "Curator-rejected."
+    };
+    var DEEP_RESEARCH_TIP = "AI deep research was used to surface this association (e.g. Perplexity / Falcon Edison Scientific Literature).";
+
+    function withTip(inner, tip) {
+        if (!tip) return inner;
+        return '<span class="badge-tip">' + inner + '<span class="tooltip-text">' + esc(tip) + '</span></span>';
+    }
+
     function renderEvidenceCard(e, context) {
         var html = '<div class="evidence-card">';
 
-        // Top row: source, jurisdiction, approval, confidence, feedback button
+        // Top row: source, jurisdiction, approval, confidence, source button, feedback button
         html += '<div class="evidence-top-row">';
         html += '<div class="evidence-top-left">';
 
@@ -520,41 +595,85 @@
             var badgeClass = sourceType ? sourceType.toLowerCase() : "unknown";
             var displaySource = sourceName;
             if (jurisdiction) displaySource += " (" + jurisdiction + ")";
-            html += '<span class="evidence-badge ' + badgeClass + '">' + esc(displaySource) + '</span>';
+            var srcTip = (e.source && e.source.description) ||
+                SOURCE_TYPE_TIPS[sourceType] ||
+                "Where this evidence was extracted from.";
+            html += withTip('<span class="evidence-badge ' + badgeClass + '">' + esc(displaySource) + '</span>', srcTip);
         }
 
-        // Approval status
+        // Source role (PRIMARY / INTERMEDIARY)
+        if (e.source_role) {
+            var roleTip = SOURCE_ROLE_TIPS[e.source_role] || "Source role";
+            html += withTip('<span class="role-badge ' + e.source_role.toLowerCase() + '">' + esc(e.source_role) + '</span>', roleTip);
+        }
+
+        // Approval status (+ approval date if present)
         if (e.approval_status) {
             var statusClass = e.approval_status.toLowerCase().replace(/[^a-z]/g, "_");
-            html += '<span class="approval-badge ' + statusClass + '">' + esc(e.approval_status) + '</span>';
+            var approvalText = e.approval_status;
+            if (e.approval_date) approvalText += " · " + e.approval_date;
+            var approvalTip = APPROVAL_STATUS_TIPS[e.approval_status] || "Regulatory approval status.";
+            if (e.approval_date) approvalTip += " Approval date: " + e.approval_date + ".";
+            html += withTip('<span class="approval-badge ' + statusClass + '">' + esc(approvalText) + '</span>', approvalTip);
+        } else if (e.approval_date) {
+            html += withTip('<span class="date-badge">' + esc(e.approval_date) + '</span>', "Approval date.");
         }
 
         // Max research phase
         if (e.max_research_phase) {
-            html += '<span class="phase-badge">' + esc(e.max_research_phase.replace(/_/g, " ")) + '</span>';
+            html += withTip('<span class="phase-badge">' + esc(e.max_research_phase.replace(/_/g, " ")) + '</span>',
+                "Highest research phase reached for this indication.");
         }
 
         // Evidence source (HUMAN_CLINICAL, etc.)
         if (e.evidence_source) {
-            html += '<span class="evidence-source-badge">' + esc(e.evidence_source.replace(/_/g, " ")) + '</span>';
+            var esTip = EVIDENCE_SOURCE_TIPS[e.evidence_source] || "Provenance of the underlying evidence.";
+            html += withTip('<span class="evidence-source-badge">' + esc(e.evidence_source.replace(/_/g, " ")) + '</span>', esTip);
         }
 
-        // Confidence indicators
+        // Confidence indicators. Three independent dimensions:
+        //   drug    — grounding of the source drug string to a CURIE (CHEBI / UNII / DRUGBANK)
+        //   disease — grounding of the source disease string to a MONDO ID
+        //   link    — extraction quality: did we correctly read the source as asserting a
+        //             drug-disease relationship at all? Independent of grounding.
+        // Tooltips also surface pre-grounding "original" strings when MEDIC carries them.
         var confDrug = e.confidence_drug || e.confidence || "";
         var confDisease = e.confidence_disease || e.confidence || "";
         var confAssoc = e.confidence_association || e.confidence || "";
         if (confDrug || confDisease || confAssoc) {
+            var origDrugLabel = e.original_drug_label || "";
+            var origDrugId = e.original_drug_id || "";
+            var origDiseaseLabel = e.original_disease_label || "";
+            var origDiseaseId = e.original_disease_id || "";
+            var drugTip = "Drug grounding — how sure we are the drug name in the source was correctly mapped to its database ID. Currently " + confDrug + ".";
+            if (origDrugLabel || origDrugId) {
+                drugTip += " Source said: " + (origDrugLabel ? "‘" + origDrugLabel + "’" : "") + (origDrugId ? " [" + origDrugId + "]" : "") + ".";
+            }
+            var diseaseTip = "Disease grounding — how sure we are the disease name in the source was correctly mapped to a MONDO term. Currently " + confDisease + ".";
+            if (origDiseaseLabel || origDiseaseId) {
+                diseaseTip += " Source said: " + (origDiseaseLabel ? "‘" + origDiseaseLabel + "’" : "") + (origDiseaseId ? " [" + origDiseaseId + "]" : "") + ".";
+            }
+            var assocTip = "Drug–disease link — how sure we are the source genuinely asserts this drug for this disease, separate from how well the names were mapped. A label can mention both clearly without strongly linking them. Currently " + confAssoc + ".";
             html += '<span class="confidence-group">';
-            if (confDrug) html += '<span class="conf-dot tooltip-wrap ' + confDrug.toLowerCase() + '">D<span class="tooltip-text">Drug confidence: ' + esc(confDrug) + '</span></span>';
-            if (confDisease) html += '<span class="conf-dot tooltip-wrap ' + confDisease.toLowerCase() + '">Dx<span class="tooltip-text">Disease confidence: ' + esc(confDisease) + '</span></span>';
-            if (confAssoc) html += '<span class="conf-dot tooltip-wrap ' + confAssoc.toLowerCase() + '">A<span class="tooltip-text">Association confidence: ' + esc(confAssoc) + '</span></span>';
+            if (confDrug) html += '<span class="conf-dot tooltip-wrap ' + confDrug.toLowerCase() + '">drug<span class="tooltip-text">' + esc(drugTip) + '</span></span>';
+            if (confDisease) html += '<span class="conf-dot tooltip-wrap ' + confDisease.toLowerCase() + '">disease<span class="tooltip-text">' + esc(diseaseTip) + '</span></span>';
+            if (confAssoc) html += '<span class="conf-dot tooltip-wrap ' + confAssoc.toLowerCase() + '">link<span class="tooltip-text">' + esc(assocTip) + '</span></span>';
             html += '</span>';
         }
 
         // Support indicator
         if (e.support) {
             var supportClass = e.support.toLowerCase().replace(/[^a-z]/g, "_");
-            html += '<span class="support-badge ' + supportClass + '">' + esc(e.support) + '</span>';
+            var supTip = SUPPORT_TIPS[e.support] || "Whether evidence supports or refutes the assertion.";
+            html += withTip('<span class="support-badge ' + supportClass + '">' + esc(e.support) + '</span>', supTip);
+        }
+
+        // Source button — compact link to the regulator/document. Only when reference is a URL.
+        var refIsUrl = e.reference && /^https?:\/\//.test(e.reference);
+        if (refIsUrl) {
+            html += '<a class="source-btn" href="' + esc(e.reference) + '" target="_blank" rel="noopener" ' +
+                'title="' + escAttr("Open source document: " + e.reference) + '">' +
+                'source <span class="ext-arrow">&#8599;</span></a>';
         }
 
         html += '</div>'; // evidence-top-left
@@ -569,26 +688,17 @@
 
         html += '</div>'; // evidence-top-row
 
-        // Reference line
-        if (e.reference || e.reference_title) {
+        // Reference line — only show when reference is a CURIE / non-URL identifier.
+        // URL references are surfaced by the "source" button in the badge row above.
+        if ((e.reference && !refIsUrl) || e.reference_title) {
             html += '<div class="evidence-ref-line">';
-            if (e.reference) {
+            if (e.reference && !refIsUrl) {
                 html += '<span class="evidence-ref">' + renderRefLink(e.reference) + '</span>';
             }
             if (e.reference_title) {
                 html += '<span class="evidence-ref-title">' + esc(e.reference_title) + '</span>';
             }
             html += '</div>';
-        }
-
-        // Source description
-        if (e.source && e.source.description) {
-            html += '<div class="evidence-source-desc">' + esc(e.source.description) + '</div>';
-        }
-
-        // Source URL
-        if (e.source && e.source.url) {
-            html += '<div class="evidence-source-url"><a href="' + esc(e.source.url) + '" target="_blank" rel="noopener">' + esc(truncate(e.source.url, 80)) + '</a></div>';
         }
 
         // Snippet
@@ -602,14 +712,24 @@
             html += '<div class="evidence-explanation">' + esc(explanation) + '</div>';
         }
 
-        // Curator
+        // Curator. When curator_id is a URL (e.g. AI_AGENT pointing at the SKILL.md),
+        // render the curator name as a link to that URL.
         if (e.curator) {
-            var curatorName = (typeof e.curator === "string") ? e.curator : (e.curator.name || "");
-            var curatorType = (typeof e.curator === "object") ? (e.curator.curator_type || "") : "";
+            var curatorIsObj = (typeof e.curator === "object");
+            var curatorName = curatorIsObj ? (e.curator.name || "") : String(e.curator);
+            var curatorType = curatorIsObj ? (e.curator.curator_type || "") : "";
+            var curatorId = curatorIsObj ? (e.curator.curator_id || "") : "";
+            var curatorUrl = (curatorId && /^https?:\/\//.test(curatorId)) ? curatorId : "";
             if (curatorName) {
                 html += '<div class="evidence-curator">';
                 if (curatorType) html += '<span class="curator-type">' + esc(curatorType.replace(/_/g, " ")) + '</span>';
-                html += esc(curatorName);
+                if (curatorUrl) {
+                    html += '<a class="curator-link" href="' + esc(curatorUrl) + '" target="_blank" rel="noopener" ' +
+                        'title="' + escAttr("Open curator source: " + curatorUrl) + '">' +
+                        esc(curatorName) + ' <span class="ext-arrow">&#8599;</span></a>';
+                } else {
+                    html += esc(curatorName);
+                }
                 html += '</div>';
             }
         }
@@ -627,21 +747,95 @@
         return html;
     }
 
-    function renderIndicationEntry(ind, _idx, _arr, diseaseCtx) {
-        var html = '<div class="drug-entry">';
+    function renderRegulatoryStatusBlock(regList) {
+        if (!regList || regList.length === 0) return "";
+        var html = '<div class="reg-status-block">';
+        html += '<div class="reg-status-label">Regulatory status</div>';
+        html += '<ul class="reg-status-list">';
+        regList.forEach(function (rs) {
+            var authority = rs.authority || "";
+            var status = rs.status || "";
+            var statusClass = status ? status.toLowerCase().replace(/[^a-z]/g, "_") : "";
+            html += '<li class="reg-status-row">';
+            if (authority) {
+                var authTip = AUTHORITY_TIPS[authority] || "Regulatory authority";
+                html += withTip('<span class="reg-authority ' + authority.toLowerCase() + '">' + esc(authority) + '</span>', authTip);
+            }
+            if (status) {
+                var statusTip = APPROVAL_STATUS_TIPS[status] || "Regulatory approval status.";
+                html += withTip('<span class="approval-badge ' + statusClass + '">' + esc(status) + '</span>', statusTip);
+            }
+            if (rs.approval_date) {
+                html += withTip('<span class="date-badge">' + esc(rs.approval_date) + '</span>', "Date of approval / market authorisation.");
+            }
+            if (rs.source_role) {
+                var roleTip = SOURCE_ROLE_TIPS[rs.source_role] || "Source role";
+                html += withTip('<span class="role-badge ' + rs.source_role.toLowerCase() + '">' + esc(rs.source_role) + '</span>', roleTip);
+            }
+            if (rs.regulatory_document_url) {
+                html += ' <a class="reg-doc-link" href="' + esc(rs.regulatory_document_url) +
+                    '" target="_blank" rel="noopener" title="' + escAttr(rs.regulatory_document_url) +
+                    '">document &#8599;</a>';
+            }
+            html += '</li>';
+        });
+        html += '</ul></div>';
+        return html;
+    }
+
+    function renderResearchHeaderBlock(r) {
+        var bits = [];
+        if (r.notes) {
+            bits.push('<div class="drug-notes">' + esc(r.notes) + '</div>');
+        }
+        var meta = [];
+        if (r.curation_date) {
+            var d = String(r.curation_date).slice(0, 10);
+            meta.push('Curated <span class="curation-date">' + esc(d) + '</span>');
+        }
+        var topCurator = r.curator;
+        if (topCurator) {
+            var name = (typeof topCurator === "string") ? topCurator : (topCurator.name || "");
+            if (name) meta.push('by <span class="curation-curator">' + esc(name) + '</span>');
+        }
+        if (meta.length) {
+            bits.push('<div class="curation-meta">' + meta.join(" ") + '</div>');
+        }
+        return bits.join("");
+    }
+
+    function renderDrugAssocEntry(item, sectionKind, diseaseCtx) {
+        var html = '<div class="drug-entry ' + sectionKind + '">';
         html += '<div class="drug-header">';
-        html += '<span class="drug-name">' + esc(ind.drug_label) + '</span>';
-        if (ind.drug_id) {
-            html += ' ' + renderCurieLink(ind.drug_id);
+        html += '<span class="drug-name">' + esc(item.drug_label) + '</span>';
+        if (item.drug_id) {
+            html += ' ' + renderCurieLink(item.drug_id);
+        }
+        if (sectionKind === "research") {
+            if (item.curation_status) {
+                var cs = item.curation_status.toLowerCase().replace(/[^a-z]/g, "_");
+                var csTip = CURATION_STATUS_TIPS[item.curation_status] || "Curation lifecycle status.";
+                html += withTip('<span class="curation-status-badge ' + cs + '">' + esc(item.curation_status) + '</span>', csTip);
+            }
+            if (item.deep_research_used) {
+                html += withTip('<span class="deep-research-badge">deep research</span>', DEEP_RESEARCH_TIP);
+            }
         }
         html += '</div>';
-        (ind.evidence || []).forEach(function (e) {
+
+        if (sectionKind === "research") {
+            html += renderResearchHeaderBlock(item);
+        } else {
+            html += renderRegulatoryStatusBlock(item.regulatory_status);
+        }
+
+        (item.evidence || []).forEach(function (e) {
             var context = {
                 disease_id: diseaseCtx.disease_id,
                 disease_label: diseaseCtx.disease_label,
-                drug_label: ind.drug_label,
-                drug_id: ind.drug_id || "",
-                section: "indication",
+                drug_label: item.drug_label,
+                drug_id: item.drug_id || "",
+                section: sectionKind,
                 source: (e.source && e.source.name) || e.source_type || "",
                 reference: e.reference || "",
             };
@@ -651,28 +845,16 @@
         return html;
     }
 
+    function renderIndicationEntry(ind, _idx, _arr, diseaseCtx) {
+        return renderDrugAssocEntry(ind, "indication", diseaseCtx);
+    }
+
+    function renderContraindicationEntry(ci, _idx, _arr, diseaseCtx) {
+        return renderDrugAssocEntry(ci, "contraindication", diseaseCtx);
+    }
+
     function renderResearchEntry(r, _idx, _arr, diseaseCtx) {
-        var html = '<div class="drug-entry">';
-        html += '<div class="drug-header">';
-        html += '<span class="drug-name">' + esc(r.drug_label) + '</span>';
-        if (r.drug_id) {
-            html += ' ' + renderCurieLink(r.drug_id);
-        }
-        html += '</div>';
-        (r.evidence || []).forEach(function (e) {
-            var context = {
-                disease_id: diseaseCtx.disease_id,
-                disease_label: diseaseCtx.disease_label,
-                drug_label: r.drug_label,
-                drug_id: r.drug_id || "",
-                section: "research",
-                source: (e.source && e.source.name) || e.source_type || "",
-                reference: e.reference || "",
-            };
-            html += renderEvidenceCard(e, context);
-        });
-        html += '</div>';
-        return html;
+        return renderDrugAssocEntry(r, "research", diseaseCtx);
     }
 
     // -- Helpers --
