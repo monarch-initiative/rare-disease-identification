@@ -8,7 +8,7 @@ curator then adds the LITERATURE and MODEL_JUDGEMENT lanes and sets the level.
 Emits a YAML patch skeleton; nothing is written to the source list by this script.
 """
 import argparse, csv, re, yaml, pathlib
-from common import (CACHE, TMP, RANKED, STATE_LISTS, ASSESSMENTS, cache_path)
+from common import (CACHE, TMP, RANKED, FC, ASSESSMENTS, cache_path)
 
 SCORE_METHOD = "phenotype-wsum-norm"
 SCORE_VERSION = "2026-09-16"
@@ -27,10 +27,32 @@ SEV_RANK = {"Complete": 4, "Severe": 3, "Moderate": 2, "Low": 1, "Unspecified": 
 FREQ_MEETS_BAR = {"Very frequent", "Frequent"}
 CAL_XWALK = TMP / "ssa/cal_mondo_crosswalk.tsv"
 
-STATE_TITLES = {
-    "nebraska": "Nebraska Medicaid Medically Frail Exemption Conditions Index",
-    "minnesota": "Minnesota Medical Assistance medically-frail condition list",
+POLICY_TSV = FC / "build/policy_evidence.tsv"
+
+SRC_TITLE = {
+    "Nebraska": "Nebraska Medicaid Medically Frail Exemption Conditions Index",
+    "Minnesota": "Minnesota DHS Appendix A, medically frail definition (PL 119-21 s71119)",
+    "Montana": "Montana DPHHS medically frail conditions",
 }
+
+
+def policy_index():
+    """MONDO id -> policy rows, from functional-capacity/build/policy_evidence.tsv.
+
+    Never match ICD codes against the state lists by hand. The lists enumerate 5-6
+    character children (G40811, Lennox-Gastaut *with status epilepticus*) while Mondo
+    maps the 4-character concept (G4081); 492 of the 1,164 hits in that table come
+    from that direction alone. Exact matching yields a confident, wrong "no state
+    lists this" - the worst error this lane can make.
+    """
+    if not POLICY_TSV.exists():
+        raise SystemExit(f"missing {POLICY_TSV}\nRebuild: python3 "
+                         "functional-capacity/scripts/step9_policy_evidence.py")
+    out = {}
+    with open(POLICY_TSV, encoding="utf-8") as fh:
+        for r in csv.DictReader(fh, delimiter="\t"):
+            out.setdefault(r["mondo_id"], []).append(r)
+    return out
 
 
 def orpha_rows(code):
@@ -83,18 +105,35 @@ def orpha_evidence(code, slot):
     return out
 
 
-def policy_evidence(icd, hits):
+def policy_evidence(rows):
+    """One STATE_POLICY_LIST line per state that reaches this disease.
+
+    Montana lists by name rather than code and assigns each condition to one of the
+    five statutory categories in 42 CFR 440.315. That category is the most directly
+    citable thing in this lane, so it lands in source_statement.
+    """
     out = []
-    for state in hits:
+    for r in rows:
+        src, mt, val = r["source"], r["match_type"], r["matched_value"]
+        if mt == "name_match":
+            stmt = f'listed as "{val}"'
+            if r.get("statutory_category"):
+                stmt += f" | statutory category: {r['statutory_category']}"
+            how = "names this condition directly"
+            ref = f"MTFRAIL:{val.replace(' ', '_')[:60]}"
+        else:
+            stmt = f"{val} reached by {mt.replace('_', ' ')}"
+            how = f"reaches {val} on its code list"
+            ref = val
         out.append({
             "lane": "STATE_POLICY_LIST",
             "direction": "SUPPORTS",
             "strength": "MODERATE",
-            "reference": f"ICD10CM:{icd[0]}",
-            "reference_title": STATE_TITLES.get(state, state),
-            "source_statement": f"{icd[0]} listed as a qualifying condition",
-            "explanation": (f"{state.title()} already treats this code as qualifying "
-                            "for its medically-frail exemption."),
+            "reference": ref,
+            "reference_title": SRC_TITLE.get(src, src),
+            "source_statement": stmt,
+            "explanation": (f"{src} {how}, treating it as qualifying for the "
+                            "medically-frail exemption."),
             "curator_type": "PIPELINE",
         })
     return out
@@ -170,17 +209,18 @@ def main():
         rows = list(csv.DictReader(fh, delimiter="\t"))
 
     cal = cal_index()
+    policy = policy_index()
     patch = {}
     for r in rows:
         icd = [c for c in r["icd10cm"].split(";") if c]
-        hits = [s for s in r["state_lists"].split(";") if s]
+        prows = policy.get(r["mondo_id"], [])
         codes = [c.split(":")[1] for c in r["orpha_cached"].split(";") if c]
         entry = {}
         for slot in ASSESSMENTS:
             ev = []
             for c in codes:
                 ev += orpha_evidence(c, slot)
-            ev += policy_evidence(icd, hits)
+            ev += policy_evidence(prows)
             ev += cal_evidence(r["mondo_id"], slot, cal)
             ev += score_evidence(r, slot)
             entry[slot] = {

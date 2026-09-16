@@ -10,7 +10,7 @@ hunting: Orphanet codes that actually have a cached functional record, ICD-10-CM
 codes, and which state lists already reach those codes.
 """
 import argparse, csv
-from common import (RANKED, ASSERTIONS, STATE_LISTS, CACHE, TMP,
+from common import (RANKED, ASSERTIONS, FC, CACHE, TMP,
                     ASSESSMENTS, load_source, orpha_codes, icd10cm_codes)
 
 
@@ -19,12 +19,21 @@ def read_tsv(path, key="mondo_id"):
         return {r[key]: r for r in csv.DictReader(fh, delimiter="\t")}
 
 
-def state_sets():
+def policy_index():
+    """MONDO id -> set of states that reach it, from the authoritative policy table.
+
+    Read the table; do not re-derive it from the raw code lists. See the note in
+    skeleton.policy_index - 42% of hits come from Mondo's 4-character code matching
+    the state list's 5-6 character children, which exact matching misses.
+    """
+    tsv = FC / "build/policy_evidence.tsv"
+    if not tsv.exists():
+        raise SystemExit(f"missing {tsv}\nRebuild: python3 "
+                         "functional-capacity/scripts/step9_policy_evidence.py")
     out = {}
-    for path in sorted(STATE_LISTS.glob("*_icd10cm.txt")):
-        name = path.stem.replace("_icd10cm", "")
-        out[name] = {l.strip().replace(".", "").upper()
-                     for l in path.read_text().splitlines() if l.strip()}
+    with open(tsv, encoding="utf-8") as fh:
+        for r in csv.DictReader(fh, delimiter="\t"):
+            out.setdefault(r["mondo_id"], set()).add(r["source"])
     return out
 
 
@@ -47,7 +56,7 @@ def main():
 
     ranked = read_tsv(RANKED)
     asserts = read_tsv(ASSERTIONS)
-    states = state_sets()
+    policy = policy_index()
     src = load_source()
 
     rows = []
@@ -62,8 +71,7 @@ def main():
 
         orpha = [c for c in orpha_codes(d) if (CACHE / f"ORPHA_{c}.md").exists()]
         icd = icd10cm_codes(d) or ([a["icd10cm"]] if a.get("icd10cm") else [])
-        icd_norm = [c.replace(".", "").upper() for c in icd]
-        hits = [n for n, codes in states.items() if any(c in codes for c in icd_norm)]
+        hits = sorted(policy.get(mid, ()))
 
         rows.append({
             "mondo_id": mid,
