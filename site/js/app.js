@@ -720,8 +720,14 @@
         html += '<span class="arrow">&#9654;</span> Functional Capacity — ' + esc(parts.join(" · "));
         html += '</button>';
         html += '<div class="section-content" id="' + id + '">';
-        html += '<p class="fc-disclaimer">These are disease-level expectations assembled from published ' +
-            'sources. They describe what is typical for a disease, and are not an assessment of any person.</p>';
+        // Shown only on unfold, and deliberately styled as a caution rather than grey
+        // boilerplate: these assessments are agent-curated, awaiting human review, and
+        // nobody has validated them clinically.
+        html += '<p class="fc-disclaimer"><strong>Experimental — not clinically validated.</strong> ' +
+            'These are disease-level expectations assembled from published sources and have not been ' +
+            'reviewed or validated by a clinician. They describe what is typical for a disease, are ' +
+            'not an assessment of any person, and must not be used to make decisions about anyone\'s ' +
+            'care, benefits, or entitlements.</p>';
         present.forEach(function (ax) {
             html += renderFcAssessment(ax[0], ax[1], ax[2], d[ax[0]]);
         });
