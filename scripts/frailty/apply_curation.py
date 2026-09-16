@@ -7,7 +7,7 @@ at the end of that block.
 
 The patch file is a mapping of MONDO id -> {work_capacity: {...}, care_dependence: {...}}.
 """
-import argparse, io, pathlib, sys, yaml
+import argparse, copy, io, pathlib, sys, yaml
 from common import SOURCE, ASSESSMENTS
 
 ENTRY = "- mondo_id: "
@@ -69,8 +69,46 @@ def main():
     if args.dry_run:
         print(f"[dry run] would write {applied} assessment blocks")
         return
+
+    verify(src.read_text(encoding="utf-8"), out)
     src.write_text(out, encoding="utf-8")
     print(f"applied {applied} assessment blocks to {src}")
+
+
+def verify(before_text, after_text):
+    """Assert the write is purely additive, by parsing - not by reading the diff.
+
+    A `git diff` deletions count tests diff *shape*, not integrity: appending keys
+    to a disease block whose last field is a long list lets git re-anchor and render
+    a block move as delete-plus-re-add. That read 0 for three batches and 131 for a
+    fourth, and neither number meant anything. Parse both sides instead.
+    """
+    before = yaml.safe_load(before_text)
+    after = yaml.safe_load(after_text)
+
+    ob = {d["mondo_id"]: d for d in before["diseases"]}
+    oa = {d["mondo_id"]: d for d in after["diseases"]}
+    if set(ob) != set(oa):
+        sys.exit(f"REFUSING TO WRITE: disease set changed "
+                 f"(-{len(set(ob) - set(oa))} +{len(set(oa) - set(ob))})")
+
+    for mid, d in ob.items():
+        n = oa[mid]
+        for key, value in d.items():
+            if key not in n:
+                sys.exit(f"REFUSING TO WRITE: {mid} lost key {key!r}")
+            if key not in ASSESSMENTS and n[key] != value:
+                sys.exit(f"REFUSING TO WRITE: {mid} altered pre-existing key {key!r}")
+        added = set(n) - set(d)
+        if not added <= set(ASSESSMENTS):
+            sys.exit(f"REFUSING TO WRITE: {mid} gained unexpected key(s) "
+                     f"{sorted(added - set(ASSESSMENTS))}")
+
+    for key in before:
+        if key != "diseases" and before[key] != after.get(key):
+            sys.exit(f"REFUSING TO WRITE: top-level key {key!r} changed")
+
+    print(f"integrity: {len(ob)} diseases, every pre-existing field unchanged")
 
 
 if __name__ == "__main__":
