@@ -61,3 +61,47 @@ serve:
 # Clean generated files
 clean:
     rm -rf .venv/ {{DATAMODEL_DIR}} {{OUTPUT}} {{TMP_DIR}}
+
+# ---------------------------------------------------------------- frailty curation
+FRAILTY := "scripts/frailty"
+REFCONFIG := "config/frailty_refval.yaml"
+WORKLIST := TMP_DIR / "frailty_worklist.tsv"
+
+# Cache Orphanet functional-consequence records as quotable markdown
+frailty-orpha-cache:
+    uv run python {{FRAILTY}}/build_orpha_cache.py
+
+# Next N unreviewed diseases by score -> tmp/frailty_worklist.tsv
+frailty-worklist n: frailty-orpha-cache frailty-ssa-cal
+    cd {{FRAILTY}} && uv run python worklist.py {{n}} -o "{{justfile_directory()}}/{{WORKLIST}}"
+
+# Cache a reference (PMID:..., DOI:...) for quoting
+fetch-reference +refs:
+    cd {{FRAILTY}} && uv run python fetch_reference.py {{refs}}
+
+# Goes through the vendored wrapper (network-retry patch + affirmative snippet
+# count), because the validator's own "Total checks: 0" counts issues found, not
+# checks performed - a clean run and a no-op look identical without the audit.
+#
+# Every quote checked verbatim against its cached reference
+verify-frailty-quotes:
+    bash {{FRAILTY}}/run_reference_validator.sh validate data "{{SOURCE}}" \
+        --schema "{{SCHEMA}}" --target-class RareDiseaseCollection \
+        --config "{{REFCONFIG}}" 2>&1 | grep -v fontTools
+
+# LinkML schema conformance for the curated list
+validate-frailty:
+    uv run linkml-validate -s "{{SCHEMA}}" -C RareDiseaseCollection "{{SOURCE}}"
+
+# Coverage, lane mix, disputed count
+frailty-stats:
+    cd {{FRAILTY}} && uv run python stats.py
+
+# Crosswalk the SSA Compassionate Allowances list (POMS DI 23022.080) to Mondo
+frailty-ssa-cal:
+    cd {{FRAILTY}} && uv run python build_ssa_cal.py
+
+# Affirmative, offline count of verified quotes (no network; advisory)
+frailty-snippet-audit:
+    uv run python -m rare_disease_identification.refval.reference_snippet_audit \
+        --schema "{{SCHEMA}}" --config "{{REFCONFIG}}" "{{SOURCE}}"
