@@ -4,7 +4,7 @@ A running log, amended after every batch. It records what the curation is *teach
 the method*, not what it produced — the numbers are in `just frailty-stats`, and the claims are
 in the list itself.
 
-**Status:** 600 of 3,079 diseases curated (19.5%), through batch 5.
+**Status:** 750 of 3,079 diseases curated (24.4%), through batch 6.
 
 | Batch | Diseases | Literature line | Orphanet rows | Graded | Disputing |
 |---|---|---|---|---|---|
@@ -13,9 +13,10 @@ in the list itself.
 | 3 (151–300) | 150 | 3% | 18 | 22 | 3 |
 | 4 (301–450) | 150 | 3% | 19 | 22 | **10** |
 | 5 (451–600) | 150 | 2% | 13 | 15 | **6** |
+| 6 (601–750) | 150 | 3% | 17 | 21 | **8** |
 
-Cumulative: **71 diseases** with an actionable level (`TOTAL`/`SUBSTANTIAL`), **33** carrying a
-literature line, **33** carrying a line that argues *against* the score.
+Cumulative: **86 diseases** with an actionable level (`TOTAL`/`SUBSTANTIAL`), **37** carrying a
+literature line, **41** carrying a line that argues *against* the score.
 
 ---
 
@@ -68,8 +69,16 @@ so a *severe but occasional* limitation argues the level **down**, however alarm
 reads. Encoding this rule in the skeleton generator was the single highest-value correctness fix
 of the project — before it, severity alone would have driven the level.
 
-**Temporality.** MELAS is rated severe and frequent but **transient** — stroke-like episodes with
-recovery between. CADASIL likewise. Severity and frequency alone would have made both `TOTAL`.
+**Episodic temporality.** MELAS is rated severe and frequent but **transient** — stroke-like
+episodes with recovery between. CADASIL likewise. Severity and frequency alone would have made
+both `TOTAL`.
+
+**Relapsing-remitting temporality** *(new in batch 6)*. Dermatomyositis, polymyositis and
+Landau-Kleffner are all rated **Complete but Transient** — total during a flare, resolving
+between. This is a third distinct mechanism, and clinically the most important one for these
+diseases: immunosuppression induces remission in most patients, so the limitation recurs rather
+than persists. All three came out `SUBSTANTIAL` on work and `MILD` on care, because they
+interrupt work far more than they create a personal-care need.
 
 ## 4. Accommodation is not incapacity — and the schema cannot yet say so
 
@@ -87,6 +96,26 @@ A recurring shape: the barrier is environmental, not functional.
 The schema records the level but has no way to say *why* it is high. "Cannot do the work" and
 "cannot be accommodated in a standard workplace" are different claims with different policy
 consequences. Worth a facet.
+
+## 4b. Subtype granularity is the score's blind spot, and Orphanet sees it
+
+By batch 6 the dataset contains several disease families where subtypes land at different levels
+on the same evidence standard. These are the clearest demonstration that disease-level curation is
+doing real work the score cannot:
+
+| Family | Subtype | Level | Why |
+|---|---|---|---|
+| Methylmalonic aciduria | `mut` | `VARIABLE` | cohort where 37% died, 32% uncompromised |
+| | `cblA` | `SUBSTANTIAL` | B12-responsive, Orphanet rates complete |
+| | `cblB` | `MILD` | B12-responsive, Orphanet rates occasional |
+| Metachromatic leukodystrophy | late infantile | `NOT_APPLICABLE` (work) | 11/16 never walk; death in childhood |
+| | juvenile | `TOTAL` | complete, permanent |
+| | adult | `TOTAL` | presents in 3rd–4th decade, inside working life |
+| Huntington disease | adult | `TOTAL`, `PRE_MANIFEST_EXCLUDED` | gene-positive ≠ affected |
+| | juvenile | `TOTAL`, no exclusion | symptomatic before working age |
+
+**Open question for review:** is disease-level the right grain, or should some of these entries
+split further?
 
 ## 5. Cross-disease citation is the most dangerous failure mode
 
@@ -129,6 +158,18 @@ and refuses to save unless every pre-existing field is byte-identical.
 
 **"Total checks: 0" from the reference validator counts *issues*, not checks.** A clean run and a
 no-op look identical. The vendored snippet audit now reports `N/N verified` instead.
+
+## 7b. What good evidence actually looks like, when we find it
+
+Batch 6 produced the first **measured employment rate** in the whole dataset — Emery-Dreifuss
+muscular dystrophy, where 54% of surveyed patients were employed and 90% of those held positions
+matching their education. That is the top-preference evidence type for the work axis and it took
+750 diseases to find one.
+
+It is worth noting what it bought: a confident `SUBSTANTIAL` with a clear reading — employment is
+reduced but far from precluded, and the work people do is skilled. Almost every other work-axis
+level in the dataset rests on an expert rating or a proxy (wheelchair use, mortality, milestone
+failure). **We are mostly inferring work capacity from things that are not work.**
 
 ## 8. What `UNKNOWN` is actually telling us
 
