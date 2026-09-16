@@ -14,3 +14,6 @@ build/
 # Not redistributed here. Regenerate with `just frailty-orpha-cache`,
 # `just frailty-ssa-cal`, and `just fetch-reference PMID:...`.
 /references_cache
+
+# Runtime lock written by the scheduler; holds a live pid and session id.
+.claude/scheduled_tasks.lock
