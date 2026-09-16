@@ -41,3 +41,6 @@ skip_prefixes:
   # STATE_POLICY_LIST cites a code on a published state list. The claim it
   # carries lives in source_statement; there is nothing to fetch.
   - ICD10CM
+  # Montana lists conditions by NAME rather than code, so its rows carry no
+  # identifier to resolve either - the statutory category is in source_statement.
+  - MTFRAIL

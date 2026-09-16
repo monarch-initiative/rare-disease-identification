@@ -24,6 +24,7 @@ prefixes:
   dcterms: http://purl.org/dc/terms/
   RDIDRUN: https://w3id.org/rare-disease-identification/run/
   SSACAL: https://secure.ssa.gov/apps10/poms.nsf/lnx/
+  MTFRAIL: https://w3id.org/rare-disease-identification/montana-frail/
 
 default_prefix: rdid
 default_range: string
