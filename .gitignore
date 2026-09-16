@@ -8,3 +8,9 @@ build/
 /data
 /issues
 /tmp
+
+# Cached third-party reference text, fetched by linkml-reference-validator:
+# PubMed abstracts, Orphanet functional-consequence records, SSA CAL listings.
+# Not redistributed here. Regenerate with `just frailty-orpha-cache`,
+# `just frailty-ssa-cal`, and `just fetch-reference PMID:...`.
+/references_cache
