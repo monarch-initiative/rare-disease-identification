@@ -4,7 +4,7 @@ A running log, amended after every batch. It records what the curation is *teach
 the method*, not what it produced — the numbers are in `just frailty-stats`, and the claims are
 in the list itself.
 
-**Status:** 750 of 3,079 diseases curated (24.4%), through batch 6.
+**Status:** 900 of 3,079 diseases curated (29.2%), through batch 7.
 
 | Batch | Diseases | Literature line | Orphanet rows | Graded | Disputing |
 |---|---|---|---|---|---|
@@ -14,9 +14,10 @@ in the list itself.
 | 4 (301–450) | 150 | 3% | 19 | 22 | **10** |
 | 5 (451–600) | 150 | 2% | 13 | 15 | **6** |
 | 6 (601–750) | 150 | 3% | 17 | 21 | **8** |
+| 7 (751–900) | 150 | 3% | 14 | 17 | **9** |
 
-Cumulative: **86 diseases** with an actionable level (`TOTAL`/`SUBSTANTIAL`), **37** carrying a
-literature line, **41** carrying a line that argues *against* the score.
+Cumulative: **99 diseases** with an actionable level (`TOTAL`/`SUBSTANTIAL`), **41** carrying a
+literature line, **50** carrying a line that argues *against* the score.
 
 ---
 
@@ -56,6 +57,19 @@ almost nobody now follows. The pattern is consistent enough to be predictive:
 
 `care_context` is doing exactly the job the spec predicted, and it is the single most valuable
 field in the schema.
+
+**Batch 7 produced the extreme case.** Untreated SMA type 1 means death or permanent ventilation
+by age 2 — historical survival 8%. After single-dose gene replacement, all 15 infants were alive
+and event-free at 20 months, and 11 of 12 at the high dose sat unassisted, fed orally and spoke,
+with 2 walking independently. Whether a child with SMA1 is totally dependent or acquiring
+milestones now depends on **newborn screening and access to therapy, not on the disease**. The
+same batch produced molybdenum cofactor deficiency type A, where fosdenopterin leaves 44%
+ambulatory at 12 months — while **type B**, curated in batch 3, has no such therapy and a median
+age at death of 2.2 years.
+
+That is the sharpest statement of the problem: for a growing set of diseases, the honest answer to
+"how impaired is someone with this condition" is *it depends on what care they received*, and a
+disease-level dataset can only record that as `VARIABLE` and say why.
 
 ## 3. Orphanet increasingly argues levels *down*, not up
 
@@ -117,6 +131,22 @@ doing real work the score cannot:
 **Open question for review:** is disease-level the right grain, or should some of these entries
 split further?
 
+## 4c. The two axes genuinely come apart
+
+A design choice that looked merely tidy is now earning its place: work capacity and care
+dependence are decided from their own evidence, never derived from each other. Batch 7 produced
+the clearest run of diseases where **care dependence outranks work capacity**:
+
+| Disease | Work | Care | Why |
+|---|---|---|---|
+| Kearns-Sayre syndrome | `MILD` | `SUBSTANTIAL` | ophthalmoplegia is visually disabling, not cognitively limiting; bulbar dysphagia is severe and very frequent |
+| Spinal muscular atrophy type IV | `MILD` | `SUBSTANTIAL` | adult onset, preserved ambulation; but transferring rated severe |
+| Friedreich ataxia | `SUBSTANTIAL` | `TOTAL` | work rows rated severity *Unspecified*; care rows severe and very frequent |
+
+**Someone can hold a job and still need help eating.** A single "how disabled is this person"
+score cannot express that, and a scheme that routed both questions through one number would get
+these diseases wrong in opposite directions.
+
 ## 5. Cross-disease citation is the most dangerous failure mode
 
 Gene-matching before citing has rejected a paper in every batch. Numbered disease series are the
@@ -170,6 +200,12 @@ It is worth noting what it bought: a confident `SUBSTANTIAL` with a clear readin
 reduced but far from precluded, and the work people do is skilled. Almost every other work-axis
 level in the dataset rests on an expert rating or a proxy (wheelchair use, mortality, milestone
 failure). **We are mostly inferring work capacity from things that are not work.**
+
+Batch 7 found the second, in Usher syndrome type 1: of 47 working-age respondents in the Swedish
+Usher database, 23 were working and 24 were not. Two employment figures in 900 diseases. That
+study also carries a finding worth repeating wherever these levels are used — *having employment
+counteracted the health and financial risks associated with the disability*. The dataset measures
+whether people can work; it should not be read as saying whether they should.
 
 ## 8. What `UNKNOWN` is actually telling us
 
