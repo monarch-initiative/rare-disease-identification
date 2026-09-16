@@ -482,14 +482,22 @@
         }
 
         // HPO profiles (SimpleTerm pills, like categories)
+        // Collapsed by default: a well-annotated disease carries over a hundred
+        // pills here, which pushed everything below it off the screen. The count
+        // stays visible so the profile's size is still legible while closed.
         var hpoProfiles = d.curated_hpo_profiles || [];
         if (hpoProfiles.length > 0) {
+            var hpoId = "hpo-" + Math.random().toString(36).slice(2, 8);
             html += '<div class="card-subsection">';
-            html += '<span class="subsection-label tooltip-wrap">Phenotype Profile' +
-                '<span class="tooltip-text">Key clinical signs and symptoms (phenotypes) associated with this disease, drawn from the Human Phenotype Ontology (HPO)</span></span>';
+            html += '<button class="subsection-toggle tooltip-wrap" onclick="toggleSection(\'' + hpoId + '\', this)">';
+            html += '<span class="arrow">&#9654;</span> Phenotype Profile ' +
+                '<span class="subsection-count">' + hpoProfiles.length + '</span>';
+            html += '<span class="tooltip-text">Key clinical signs and symptoms (phenotypes) associated with this disease, drawn from the Human Phenotype Ontology (HPO)</span>';
+            html += '</button>';
+            html += '<div class="section-content" id="' + hpoId + '">';
             html += '<div class="category-list">';
             hpoProfiles.forEach(function (t) { html += renderTermPill(t, "hpo"); });
-            html += '</div></div>';
+            html += '</div></div></div>';
         }
 
         html += '</div>'; // card-body

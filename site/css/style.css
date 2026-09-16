@@ -1362,3 +1362,34 @@ footer a:hover { text-decoration: underline; }
     .fc-status { margin-left: 0; }
     .fc-head { gap: 0.25rem; }
 }
+
+/* Phenotype profile toggle — matches .section-toggle, but sits inside the card
+   body as a subsection rather than a bottom-level card section. */
+.subsection-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0.1rem 0;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text);
+    text-align: left;
+    font-family: inherit;
+}
+.subsection-toggle:hover { color: var(--primary); }
+.subsection-toggle .arrow { transition: transform 0.2s; font-size: 0.65rem; }
+.subsection-toggle.open .arrow { transform: rotate(90deg); }
+
+.subsection-count {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: #f1f5f9;
+    padding: 0.02rem 0.32rem;
+    border-radius: 3px;
+    font-variant-numeric: tabular-nums;
+}
