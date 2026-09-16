@@ -1,0 +1,286 @@
+id: https://w3id.org/rare-disease-identification/functional-capacity
+name: functional_capacity
+title: Functional Capacity Assessment Schema
+description: >-
+  Two curated, evidence-backed assessments per rare disease: whether affected
+  people can sustain work, and whether they need daily personal care.
+
+  Every assessment carries an explicit impairment level, the computed score that
+  proposed it, and a list of evidence lines drawn from five independent lanes.
+  Nothing is silent: a disease with no evidence says UNKNOWN and says why.
+
+  Evidence structure follows SEPIO via `monarch-initiative/sieve`
+  (EvidenceLine = direction + strength + item), flattened for hand-curation.
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  rdid: https://w3id.org/rare-disease-identification/
+  MONDO: http://purl.obolibrary.org/obo/MONDO_
+  ORPHA: http://www.orpha.net/ORDO/Orphanet_
+  PMID: http://www.ncbi.nlm.nih.gov/pubmed/
+  ECO: http://purl.obolibrary.org/obo/ECO_
+  ICD10CM: http://purl.bioontology.org/ontology/ICD10CM/
+  oa: http://www.w3.org/ns/oa#
+  dcterms: http://purl.org/dc/terms/
+  RDIDRUN: https://w3id.org/rare-disease-identification/run/
+  SSACAL: https://secure.ssa.gov/apps10/poms.nsf/lnx/
+
+default_prefix: rdid
+default_range: string
+imports:
+  - linkml:types
+
+enums:
+
+  ImpairmentLevelEnum:
+    description: >-
+      How much the disease impairs the capacity in question, for a typical
+      affected person under standard of care. Mirrors Orphanet's severity
+      bands (Low / Moderate / Severe / Complete) so the two can be compared.
+    permissible_values:
+      NONE:
+        description: Typical affected people are not meaningfully impaired in this capacity.
+      MILD:
+        description: Harder, but most affected people manage without help or accommodation.
+      SUBSTANTIAL:
+        description: >-
+          A serious barrier. A substantial proportion (>=30%) need accommodation,
+          reduced hours, or regular assistance.
+      TOTAL:
+        description: >-
+          A substantial proportion (>=30%) cannot sustain competitive employment at
+          all, or need daily personal assistance from another person.
+      VARIABLE:
+        description: >-
+          Genuinely varies by subtype, stage, or treatment response; no single level
+          is representative. Use the rationale to say what it varies with.
+      NOT_APPLICABLE:
+        description: >-
+          The question does not arise. Chiefly: work capacity for a disease that is
+          near-universally lethal before working age.
+      UNKNOWN:
+        description: Not yet assessed, or assessed and found to have no usable evidence.
+
+  CareContextEnum:
+    description: >-
+      Which course the assessment describes. Required, because untreated natural
+      history and treated course diverge sharply for screened metabolic disease
+      and this is the single largest source of false positives.
+    permissible_values:
+      STANDARD_OF_CARE_TREATED:
+        description: The course under current standard of care. The only context that may inform policy use.
+      UNTREATED_NATURAL_HISTORY:
+        description: The untreated course. Must never be presented as the current expectation.
+      TREATMENT_REFRACTORY:
+        description: The course in people who do not respond to standard treatment.
+      UNKNOWN:
+        description: The source does not say which course it describes.
+
+  LifeStageEnum:
+    description: The life stage the assessment applies to.
+    permissible_values:
+      CONGENITAL: {description: "Present from birth"}
+      PAEDIATRIC: {description: "Onset and impact in childhood"}
+      ADULT_ONSET: {description: "Onset in adulthood"}
+      PROGRESSIVE_LATE_STAGE: {description: "Applies only once the disease has progressed"}
+      ANY: {description: "Applies across life stages"}
+      PRE_MANIFEST_EXCLUDED: {description: "Explicitly excludes pre-manifest carriers"}
+
+  EvidenceLaneEnum:
+    description: >-
+      The independent lanes evidence can come from. A well-curated assessment draws on
+      more than one, and lanes that disagree are recorded, not reconciled away.
+
+      Policy evidence is split in two because a federal disability adjudication and a
+      state Medicaid frailty code are genuinely independent decisions - different
+      statutes, different bodies, different qualifying tests - and collapsing them into
+      one lane made concordant government determinations look like a single source.
+    permissible_values:
+      EXPERT_DATABASE:
+        description: >-
+          A curated database rating functional consequence directly - chiefly Orphanet's
+          functional-consequences dataset, which names its validating expert.
+      FEDERAL_POLICY_LIST:
+        description: >-
+          A national-level determination that this disease qualifies, made by the body
+          that administers the benefit - chiefly the SSA Compassionate Allowances list
+          (POMS DI 23022.080), which certifies that a condition precludes substantial
+          gainful activity. Because that is an adjudication of the work question itself
+          rather than a proxy for it, this lane is only used on work_capacity.
+      STATE_POLICY_LIST:
+        description: >-
+          A sub-national government or payer list that already treats this disease as
+          qualifying - state Medicaid medically-frail condition lists, which are keyed to
+          ICD-10-CM codes. Independent of the federal lane: different statute, different
+          body, different qualifying test.
+      LITERATURE:
+        description: >-
+          A peer-reviewed publication reporting employment, ADL, caregiver-burden or
+          functional outcomes. Requires a verified quote.
+      MODEL_JUDGEMENT:
+        description: >-
+          A language model's structured judgement from the disease description.
+          Never sufficient alone; benchmarked against EXPERT_DATABASE before use.
+      COMPUTED_SCORE:
+        description: >-
+          The phenotype-based score. A ranking signal, not a finding.
+
+  EvidenceDirectionEnum:
+    description: Whether this evidence line supports or disputes the assessment.
+    permissible_values:
+      SUPPORTS: {description: "Supports the stated impairment level"}
+      DISPUTES: {description: "Argues for a lower impairment level than stated"}
+      NEUTRAL: {description: "Relevant but does not move the assessment"}
+
+  EvidenceStrengthEnum:
+    description: How much weight this line carries.
+    permissible_values:
+      STRONG:
+        description: >-
+          Direct measurement in an identified human cohort, or a named expert's
+          rating of this specific disease.
+      MODERATE:
+        description: Indirect, small, or from a closely related disease.
+      WEAK:
+        description: Inference, opinion, or unbenchmarked model output.
+
+  FCCurationStatusEnum:
+    description: Curation lifecycle of the assessment.
+    permissible_values:
+      UNREVIEWED: {description: "Proposed by pipeline, no curator has looked"}
+      AI_CURATED: {description: "Evidence gathered and synthesised by an agent, awaiting human review"}
+      EXPERT_REVIEWED: {description: "A named human clinician has reviewed and accepted"}
+      DISPUTED: {description: "Evidence lanes conflict and a human must resolve"}
+      REJECTED: {description: "Reviewed and rejected; kept so the rejection is visible"}
+
+  CuratorTypeEnum2:
+    description: Who produced an evidence line.
+    permissible_values:
+      AI_AGENT: {description: "LLM-based agent"}
+      PIPELINE: {description: "Deterministic script"}
+      HUMAN: {description: "Human curator"}
+
+classes:
+
+  FunctionalCapacityEvidence:
+    description: >-
+      One evidence line. Flattened SEPIO EvidenceLine: what kind of evidence,
+      which way it points, how strong, and the item itself.
+    attributes:
+      lane:
+        range: EvidenceLaneEnum
+        required: true
+      direction:
+        range: EvidenceDirectionEnum
+        required: true
+        ifabsent: string(SUPPORTS)
+      strength:
+        range: EvidenceStrengthEnum
+        required: true
+      reference:
+        description: >-
+          Identifier for the evidence item. PMID:12345678, ORPHA:558,
+          ICD10CM:G40.81, a state list name, or a model run id.
+        range: string
+        required: true
+        slot_uri: dcterms:references
+        # `implements` as well as `slot_uri`: upstream field detection accepts
+        # either, but the vendored snippet audit only reads `implements`.
+        implements:
+          - linkml:authoritative_reference
+      reference_title:
+        description: Title of the cited work, or name of the source list.
+        range: string
+        slot_uri: dcterms:title
+      quote:
+        description: >-
+          Exact quote from the source that carries the claim. Required for
+          LITERATURE and EXPERT_DATABASE lanes. Must be verifiable verbatim.
+        range: string
+        slot_uri: oa:exact
+        implements:
+          - linkml:excerpt
+      quote_verified:
+        description: >-
+          Whether the quote was machine-checked against the cached source.
+          Never set this by hand - the validator sets it.
+        range: boolean
+      source_statement:
+        description: >-
+          For EXPERT_DATABASE and the two policy lanes, the structured assertion the
+          source makes, e.g. "Engaging in paid work in a standard environment | Frequent | Severe | Permanent".
+        range: string
+      population:
+        description: Cohort the evidence describes (n, country, age range, ascertainment).
+        range: string
+      explanation:
+        description: One sentence on why this supports or disputes the assessment.
+        range: string
+        required: true
+      eco_code:
+        description: Evidence & Conclusion Ontology term, where one fits.
+        range: uriorcurie
+      curator:
+        range: string
+      curator_type:
+        range: CuratorTypeEnum2
+      retrieved_on:
+        range: date
+
+  FunctionalCapacityAssessment:
+    description: >-
+      One curated capacity assessment for one disease. Either work capacity or
+      care dependence - the two are separate assessments and are not derived
+      from each other.
+    attributes:
+      impairment:
+        range: ImpairmentLevelEnum
+        required: true
+        description: The headline judgement.
+      score:
+        range: float
+        description: Computed phenotype score that proposed this. Ranking signal only.
+      score_method:
+        description: Which method produced `score`, e.g. "phenotype-wsum-norm".
+        range: string
+      score_version:
+        description: Version or date of the scoring run, so a number can be reproduced.
+        range: string
+      model_confidence:
+        description: Language-model confidence 0-100 from the MODEL_JUDGEMENT lane.
+        range: integer
+        minimum_value: 0
+        maximum_value: 100
+      care_context:
+        range: CareContextEnum
+        required: true
+      life_stage:
+        range: LifeStageEnum
+      rationale:
+        description: >-
+          Two or three sentences a clinician would recognise. Say what drives the
+          level, and name the strongest disagreeing evidence if there is any.
+        range: string
+        required: true
+      evidence:
+        range: FunctionalCapacityEvidence
+        multivalued: true
+        inlined_as_list: true
+      curation_status:
+        range: FCCurationStatusEnum
+        required: true
+        ifabsent: string(UNREVIEWED)
+      claims_selectable:
+        description: >-
+          Whether an ICD-10-CM code exists for this disease at all. Decides whether
+          the disease can be screened from claims or needs an attestation route.
+        range: boolean
+      icd10cm_codes:
+        range: string
+        multivalued: true
+      assessed_by:
+        range: string
+      assessed_on:
+        range: date
+      notes:
+        range: string

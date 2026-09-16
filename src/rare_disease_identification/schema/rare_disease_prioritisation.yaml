@@ -14,6 +14,7 @@ prefixes:
 
 imports:
   - linkml:types
+  - functional_capacity
 
 default_range: string
 
@@ -436,6 +437,18 @@ classes:
         description: Alternative names and terms used to refer to this disease.
         range: string
         multivalued: true
+      work_capacity:
+        description: >-
+          Curated assessment of whether affected adults of working age can sustain
+          competitive employment. See schema/functional_capacity.yaml.
+        range: FunctionalCapacityAssessment
+        inlined: true
+      care_dependence:
+        description: >-
+          Curated assessment of whether affected people need substantial daily
+          personal assistance or continuous supervision.
+        range: FunctionalCapacityAssessment
+        inlined: true
       hpo_high_level_categories:
         description: HPO high-level phenotype categories.
         range: SimpleTerm
