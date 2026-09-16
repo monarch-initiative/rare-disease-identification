@@ -386,12 +386,6 @@
             html += '</div>';
         }
 
-        // Functional capacity — curated work-capacity / care-dependence assessments.
-        // Sits directly under the disease identity, above the category and phenotype
-        // pill lists: it is a curated claim about the disease, and burying it below
-        // a hundred HPO pills made it effectively invisible.
-        html += renderFunctionalCapacity(d);
-
         // Categories — each type in its own labelled section
         var mondoCats = d.mondo_category_body_system || [];
         var hpoCats = d.hpo_high_level_categories || [];
@@ -473,6 +467,10 @@
                 highlightText(truncate(d.additional_justification, 200), searchQuery) + '</div>';
         }
         html += '</div>'; // detail-grid
+
+        // Functional capacity — sits with the other per-disease judgements, directly
+        // under the ranking and justification block, and above the reference material.
+        html += renderFunctionalCapacity(d);
 
         // Cross-references
         if (d.ontology_terminology_codes && d.ontology_terminology_codes.length > 0) {
