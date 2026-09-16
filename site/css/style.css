@@ -1155,3 +1155,210 @@ footer a:hover { text-decoration: underline; }
     .header-inner { flex-direction: column; gap: 0.5rem; }
     .header-stats { flex-wrap: wrap; }
 }
+
+/* ---------------------------------------------------------------- Functional capacity
+   Two curated assessments per disease. The palette encodes severity on one axis
+   (grey -> blue -> amber -> red) so a reader can scan levels without reading them,
+   and UNKNOWN is deliberately given a visible neutral style rather than being
+   hidden: "assessed and nothing found" is a result in this dataset, not an absence. */
+
+.fc-tag { border: 1px solid transparent; }
+.fc-none, .fc-not_applicable { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.fc-mild { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+.fc-substantial { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.fc-total { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+.fc-variable { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
+.fc-unknown { background: #f8fafc; color: #64748b; border-color: var(--border-strong); border-style: dashed; }
+
+.fc-disclaimer {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    background: #f8fafc;
+    border-left: 3px solid var(--border-strong);
+    padding: 0.35rem 0.5rem;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 0.5rem;
+}
+
+.fc-assessment {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--card-bg);
+}
+
+.fc-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.fc-axis { font-size: 0.8rem; font-weight: 600; margin-right: 0.15rem; }
+
+.fc-level {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0.08rem 0.4rem;
+    border-radius: 3px;
+    border: 1px solid transparent;
+}
+
+.fc-context, .fc-stage {
+    font-size: 0.68rem;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+}
+/* An assessment describing the untreated course must never read as the current
+   expectation, so it is flagged rather than shown as a neutral chip. */
+.fc-context.warn { background: #fef2f2; color: #991b1b; font-weight: 600; }
+
+.fc-status {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+    background: #f1f5f9;
+    color: #64748b;
+    margin-left: auto;
+}
+.fc-status.ai_curated { background: #eff6ff; color: #1d4ed8; }
+.fc-status.expert_reviewed { background: var(--green-bg); color: var(--green); }
+.fc-status.disputed { background: #fef3c7; color: #92400e; }
+.fc-status.rejected { background: var(--red-bg); color: var(--red); }
+
+.fc-rationale {
+    margin-top: 0.35rem;
+    font-size: 0.77rem;
+    color: var(--text);
+    line-height: 1.55;
+}
+
+.fc-ev-toggle {
+    margin-top: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0.1rem 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.fc-ev-toggle:hover { color: var(--primary); }
+.fc-ev-toggle .arrow { transition: transform 0.2s; font-size: 0.62rem; }
+.fc-ev-toggle.open .arrow { transform: rotate(90deg); }
+
+.fc-evidence {
+    margin-top: 0.35rem;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: 0 4px 4px 0;
+    background: #fdfdfe;
+    font-size: 0.75rem;
+}
+/* Disagreement is the most informative thing on the card; give it its own colour
+   so a reader never sees only the headline level. */
+.fc-evidence.disputes { border-left-color: var(--amber); background: var(--amber-bg); }
+.fc-evidence.neutral { border-left-color: var(--border-strong); }
+.fc-evidence.supports { border-left-color: #93c5fd; }
+
+.fc-ev-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.fc-lane {
+    font-size: 0.63rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+    background: #e2e8f0;
+    color: #334155;
+}
+.fc-lane.expert_database { background: #e0f2fe; color: #0369a1; }
+.fc-lane.literature { background: #ede9fe; color: #5b21b6; }
+.fc-lane.federal_policy_list { background: #dcfce7; color: #166534; }
+.fc-lane.state_policy_list { background: #ecfccb; color: #3f6212; }
+.fc-lane.model_judgement { background: #fae8ff; color: #86198f; }
+.fc-lane.computed_score { background: #f1f5f9; color: #64748b; }
+
+.fc-dir {
+    font-size: 0.63rem;
+    font-weight: 700;
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+}
+.fc-dir.disputes { background: #fef3c7; color: #92400e; }
+.fc-dir.neutral { background: #f1f5f9; color: #64748b; }
+
+.fc-strength {
+    font-size: 0.63rem;
+    font-weight: 600;
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+.fc-strength.strong { color: var(--green); border-color: #bbf7d0; background: var(--green-bg); }
+.fc-strength.moderate { color: var(--amber); border-color: #fde68a; background: var(--amber-bg); }
+
+.fc-ref { font-size: 0.7rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.fc-ref a { color: var(--primary); text-decoration: none; }
+.fc-ref a:hover { text-decoration: underline; }
+.fc-ref-internal { color: var(--text-light); }
+
+.fc-ev-title {
+    margin-top: 0.2rem;
+    font-size: 0.72rem;
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+/* A verbatim quote, machine-checked against the cached source. Styled like the
+   drug-evidence snippet so "this is source text, not our words" reads the same
+   way everywhere on the page. */
+.fc-quote {
+    margin-top: 0.3rem;
+    padding: 0.35rem 0.45rem;
+    background: #fefce8;
+    border-left: 3px solid #fbbf24;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.74rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+/* A structured assertion from a database or policy list, rather than prose. */
+.fc-statement {
+    margin-top: 0.3rem;
+    padding: 0.3rem 0.45rem;
+    background: #f8fafc;
+    border: 1px dashed var(--border-strong);
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #334155;
+}
+
+.fc-population { margin-top: 0.25rem; font-size: 0.71rem; color: var(--text-muted); }
+.fc-ev-explanation { margin-top: 0.25rem; font-size: 0.73rem; color: var(--text-muted); line-height: 1.5; }
+
+@media (max-width: 640px) {
+    .fc-status { margin-left: 0; }
+    .fc-head { gap: 0.25rem; }
+}

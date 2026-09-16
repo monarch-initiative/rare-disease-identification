@@ -19,6 +19,7 @@
         prioritization: new Set(),
         prevalence: new Set(),
         treatments: new Set(),
+        functional: new Set(),
         category: new Set(),
         hpo: new Set(),
     };
@@ -57,6 +58,18 @@
     };
 
     // -- EPM / CURIE resolution --
+
+    var FUNCTIONAL_LABELS = {
+        TOTAL: "Work: total impairment",
+        SUBSTANTIAL: "Work: substantial",
+        MILD: "Work: mild",
+        NONE: "Work: none",
+        VARIABLE: "Work: varies by subtype",
+        NOT_APPLICABLE: "Work: not applicable",
+        UNKNOWN: "Assessed, no usable evidence",
+        disputed: "Lanes disagree (disputed)",
+        not_curated: "Not yet curated"
+    };
 
     function buildPrefixMap(epm) {
         epm.forEach(function (entry) {
@@ -154,6 +167,15 @@
             var prevGroup = document.getElementById("prevalence-filter-group");
             if (prevGroup) prevGroup.style.display = "none";
         }
+        // Functional capacity: group by the work-capacity level, plus an explicit
+        // "not yet curated" bucket so the 50 curated diseases are findable among 3,079.
+        buildFilterGroup("filter-functional", "functional", function (d) {
+            if (!d.work_capacity && !d.care_dependence) return "not_curated";
+            if ((d.work_capacity && d.work_capacity.curation_status === "DISPUTED") ||
+                (d.care_dependence && d.care_dependence.curation_status === "DISPUTED")) return "disputed";
+            return (d.work_capacity && d.work_capacity.impairment) || "UNKNOWN";
+        }, FUNCTIONAL_LABELS);
+
         buildFilterGroup("filter-treatments", "treatments", function (d) {
             if (d.indications && d.indications.length > 0) return "has_indications";
             if (d.research && d.research.length > 0) return "has_research";
@@ -239,6 +261,15 @@
             if (SHOW_PREVALENCE && activeFilters.prevalence.size > 0 &&
                 !activeFilters.prevalence.has(d.prevalence_category || "unknown"))
                 return false;
+
+            if (activeFilters.functional.size > 0) {
+                var fcTag;
+                if (!d.work_capacity && !d.care_dependence) fcTag = "not_curated";
+                else if ((d.work_capacity && d.work_capacity.curation_status === "DISPUTED") ||
+                         (d.care_dependence && d.care_dependence.curation_status === "DISPUTED")) fcTag = "disputed";
+                else fcTag = (d.work_capacity && d.work_capacity.impairment) || "UNKNOWN";
+                if (!activeFilters.functional.has(fcTag)) return false;
+            }
 
             if (activeFilters.treatments.size > 0) {
                 var tag = "no_treatments";
@@ -338,6 +369,8 @@
         }
         if (hasIndications) html += '<span class="tag has-indications">Approved Indications</span>';
         if (hasContraindications) html += '<span class="tag has-contraindications">Contraindications</span>';
+        if (d.work_capacity) html += renderFcBadge("Work", d.work_capacity);
+        if (d.care_dependence) html += renderFcBadge("Care", d.care_dependence);
         (d.keywords || []).forEach(function (k) {
             html += '<span class="tag keyword">' + esc(k) + '</span>';
         });
@@ -458,6 +491,9 @@
         // Disease context for feedback
         var diseaseCtx = { disease_id: d.mondo_id, disease_label: d.mondo_label };
 
+        // Functional capacity — curated work-capacity / care-dependence assessments
+        html += renderFunctionalCapacity(d);
+
         // Approved indications section
         if (hasIndications) {
             html += renderCollapsibleSection("indications", d.indications,
@@ -480,6 +516,207 @@
         }
 
         html += '</div>'; // disease-card
+        return html;
+    }
+
+
+    // ---------------------------------------------------------------- Functional capacity
+    // Two curated assessments per disease: can affected people sustain work, and do
+    // they need daily personal care. Rendering rules that matter here:
+    //   * UNKNOWN is shown, never hidden. "Assessed and nothing found" is a curated
+    //     result in this dataset, and silently dropping it would misrepresent coverage.
+    //   * care_context is always shown next to the level, because an assessment built
+    //     from untreated natural history must not be read as the current expectation.
+    //   * DISPUTES evidence is styled apart from SUPPORTS, so a reader sees that the
+    //     lanes disagreed rather than only the headline.
+
+    var IMPAIRMENT_TIPS = {
+        NONE: "Typical affected people are not meaningfully impaired in this capacity.",
+        MILD: "Harder, but most affected people manage without help or accommodation.",
+        SUBSTANTIAL: "A serious barrier: at least ~30% need accommodation, reduced hours, or regular assistance.",
+        TOTAL: "At least ~30% cannot sustain competitive employment at all, or need daily personal assistance.",
+        VARIABLE: "Genuinely varies by subtype, stage, or treatment response; no single level is representative.",
+        NOT_APPLICABLE: "The question does not arise — chiefly work capacity for a disease lethal before working age.",
+        UNKNOWN: "Assessed, but no usable evidence was found. See the rationale for what was searched."
+    };
+    var CARE_CONTEXT_TIPS = {
+        STANDARD_OF_CARE_TREATED: "Describes the course under current standard of care. The only context that may inform policy use.",
+        UNTREATED_NATURAL_HISTORY: "Describes the UNTREATED course. Must not be presented as the current expectation.",
+        TREATMENT_REFRACTORY: "Describes the course in people who do not respond to standard treatment.",
+        UNKNOWN: "The source does not say which course it describes."
+    };
+    var FC_LANE_TIPS = {
+        EXPERT_DATABASE: "A curated database rating functional consequence directly — chiefly Orphanet, which names its validating expert.",
+        FEDERAL_POLICY_LIST: "A national determination that the disease qualifies — the SSA Compassionate Allowances list, which certifies that a condition precludes substantial gainful activity.",
+        STATE_POLICY_LIST: "A state Medicaid medically-frail condition list, keyed to ICD-10-CM codes.",
+        LITERATURE: "A peer-reviewed publication reporting employment, ADL, caregiver-burden or functional outcomes. Every quote is machine-checked against the cached source.",
+        MODEL_JUDGEMENT: "A language model's structured judgement from the disease description. Never sufficient alone.",
+        COMPUTED_SCORE: "The phenotype-based score. A ranking signal, not a finding."
+    };
+    var FC_STRENGTH_TIPS = {
+        STRONG: "Direct measurement in an identified human cohort, or a named expert's rating of this disease.",
+        MODERATE: "Indirect, small, or from a closely related disease.",
+        WEAK: "Inference, opinion, or unbenchmarked model output."
+    };
+    var FC_DIRECTION_TIPS = {
+        SUPPORTS: "Supports the stated impairment level.",
+        DISPUTES: "Argues for a LOWER impairment level than stated.",
+        NEUTRAL: "Relevant but does not move the assessment."
+    };
+    var FC_STATUS_TIPS = {
+        UNREVIEWED: "Proposed by the pipeline; no curator has looked.",
+        AI_CURATED: "Evidence gathered and synthesised by an agent, awaiting human review.",
+        EXPERT_REVIEWED: "A named human clinician has reviewed and accepted this.",
+        DISPUTED: "Evidence lanes conflict and a human must resolve it.",
+        REJECTED: "Reviewed and rejected; kept so the rejection stays visible."
+    };
+    var FC_AXES = [
+        ["work_capacity", "Work capacity", "Can affected adults of working age sustain competitive employment?"],
+        ["care_dependence", "Care dependence", "Do affected people need daily personal assistance or supervision?"]
+    ];
+
+    function fcClass(level) {
+        return "fc-" + String(level || "unknown").toLowerCase();
+    }
+
+    // Compact badge for the card header, e.g. "Work: TOTAL".
+    function renderFcBadge(short, a) {
+        var lvl = a.impairment || "UNKNOWN";
+        var tip = short + " — " + (IMPAIRMENT_TIPS[lvl] || "");
+        if (a.care_context && a.care_context !== "UNKNOWN") {
+            tip += " Context: " + a.care_context.replace(/_/g, " ").toLowerCase() + ".";
+        }
+        var label = short + ": " + lvl.replace(/_/g, " ");
+        return withTip('<span class="tag fc-tag ' + fcClass(lvl) + '">' + esc(label) + '</span>', tip);
+    }
+
+    function renderFcEvidence(e) {
+        var dir = e.direction || "SUPPORTS";
+        var html = '<div class="fc-evidence ' + dir.toLowerCase() + '">';
+
+        html += '<div class="fc-ev-top">';
+        if (e.lane) {
+            html += withTip('<span class="fc-lane ' + e.lane.toLowerCase() + '">' +
+                esc(e.lane.replace(/_/g, " ")) + '</span>', FC_LANE_TIPS[e.lane] || "");
+        }
+        if (dir !== "SUPPORTS") {
+            html += withTip('<span class="fc-dir ' + dir.toLowerCase() + '">' + esc(dir) + '</span>',
+                FC_DIRECTION_TIPS[dir] || "");
+        }
+        if (e.strength) {
+            html += withTip('<span class="fc-strength ' + e.strength.toLowerCase() + '">' +
+                esc(e.strength) + '</span>', FC_STRENGTH_TIPS[e.strength] || "");
+        }
+        if (e.reference) {
+            html += '<span class="fc-ref">' + renderFcRefLink(e.reference) + '</span>';
+        }
+        html += '</div>';
+
+        if (e.reference_title) {
+            html += '<div class="fc-ev-title">' + esc(e.reference_title) + '</div>';
+        }
+        // A quote is verbatim source text; a source_statement is the structured row a
+        // database or policy list asserts. Only one is present per line.
+        if (e.quote) {
+            html += '<div class="fc-quote">' + esc(e.quote) + '</div>';
+        } else if (e.source_statement) {
+            html += '<div class="fc-statement">' + esc(e.source_statement) + '</div>';
+        }
+        if (e.population) {
+            html += '<div class="fc-population"><strong>Population:</strong> ' + esc(e.population) + '</div>';
+        }
+        if (e.explanation) {
+            html += '<div class="fc-ev-explanation">' + esc(e.explanation) + '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    // Internal run identifiers (RDIDRUN:) are provenance, not links.
+    function renderFcRefLink(ref) {
+        if (!ref) return "";
+        if (ref.indexOf("RDIDRUN:") === 0) {
+            return '<span class="fc-ref-internal">' + esc(ref.replace("RDIDRUN:", "")) + '</span>';
+        }
+        if (ref.indexOf("SSACAL:") === 0) {
+            var sec = ref.replace("SSACAL:", "");
+            return '<a href="https://secure.ssa.gov/apps10/poms.nsf/lnx/0' + esc(sec) +
+                '" target="_blank" rel="noopener">' + esc(ref) + '</a>';
+        }
+        if (ref.indexOf("ORPHA:") === 0) {
+            return '<a href="https://www.orpha.net/en/disease/detail/' + esc(ref.replace("ORPHA:", "")) +
+                '" target="_blank" rel="noopener">' + esc(ref) + '</a>';
+        }
+        if (ref.indexOf("ICD10CM:") === 0) {
+            return '<span class="fc-ref-internal">' + esc(ref) + '</span>';
+        }
+        return renderRefLink(ref);
+    }
+
+    function renderFcAssessment(key, title, axisTip, a) {
+        var lvl = a.impairment || "UNKNOWN";
+        var html = '<div class="fc-assessment">';
+
+        html += '<div class="fc-head">';
+        html += '<span class="fc-axis tooltip-wrap">' + esc(title) +
+            '<span class="tooltip-text">' + esc(axisTip) + '</span></span>';
+        html += withTip('<span class="fc-level ' + fcClass(lvl) + '">' + esc(lvl.replace(/_/g, " ")) + '</span>',
+            IMPAIRMENT_TIPS[lvl] || "");
+        if (a.care_context) {
+            var ctxClass = a.care_context === "UNTREATED_NATURAL_HISTORY" ? "warn" : "";
+            html += withTip('<span class="fc-context ' + ctxClass + '">' +
+                esc(a.care_context.replace(/_/g, " ").toLowerCase()) + '</span>',
+                CARE_CONTEXT_TIPS[a.care_context] || "");
+        }
+        if (a.life_stage) {
+            html += withTip('<span class="fc-stage">' + esc(a.life_stage.replace(/_/g, " ").toLowerCase()) + '</span>',
+                "Life stage this assessment applies to.");
+        }
+        if (a.curation_status) {
+            html += withTip('<span class="fc-status ' + a.curation_status.toLowerCase() + '">' +
+                esc(a.curation_status.replace(/_/g, " ")) + '</span>', FC_STATUS_TIPS[a.curation_status] || "");
+        }
+        html += '</div>';
+
+        if (a.rationale) {
+            html += '<div class="fc-rationale">' + esc(a.rationale) + '</div>';
+        }
+
+        var ev = a.evidence || [];
+        if (ev.length > 0) {
+            var evId = "fcev-" + Math.random().toString(36).slice(2, 8);
+            var nDisputes = ev.filter(function (e) { return e.direction === "DISPUTES"; }).length;
+            var label = ev.length + " evidence line" + (ev.length === 1 ? "" : "s");
+            if (nDisputes > 0) label += " · " + nDisputes + " disputing";
+            html += '<button class="fc-ev-toggle" onclick="toggleSection(\'' + evId + '\', this)">' +
+                '<span class="arrow">&#9654;</span> ' + esc(label) + '</button>';
+            html += '<div class="section-content" id="' + evId + '">';
+            ev.forEach(function (e) { html += renderFcEvidence(e); });
+            html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    function renderFunctionalCapacity(d) {
+        var present = FC_AXES.filter(function (ax) { return d[ax[0]]; });
+        if (present.length === 0) return "";
+
+        var parts = present.map(function (ax) { return ax[1] + " " + (d[ax[0]].impairment || "UNKNOWN"); });
+        var id = "fc-" + Math.random().toString(36).slice(2, 8);
+
+        var html = '<div class="card-section">';
+        html += '<button class="section-toggle" onclick="toggleSection(\'' + id + '\', this)">';
+        html += '<span class="arrow">&#9654;</span> Functional Capacity — ' + esc(parts.join(" · "));
+        html += '</button>';
+        html += '<div class="section-content" id="' + id + '">';
+        html += '<p class="fc-disclaimer">These are disease-level expectations assembled from published ' +
+            'sources. They describe what is typical for a disease, and are not an assessment of any person.</p>';
+        present.forEach(function (ax) {
+            html += renderFcAssessment(ax[0], ax[1], ax[2], d[ax[0]]);
+        });
+        html += '</div></div>';
         return html;
     }
 
