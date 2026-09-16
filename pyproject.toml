@@ -10,6 +10,7 @@ dependencies = [
     "pyyaml",
     "click",
     "oaklib>=0.6.23",
+    "linkml-reference-validator>=0.2.1rc2",
 ]
 
 [tool.setuptools.packages.find]

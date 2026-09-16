@@ -1,0 +1,43 @@
+# Reference-validation config for the frailty curation lanes.
+#
+# Abstracts only: every curation quote must come from the PubMed abstract, the
+# Orphanet cache, or the SSA CAL cache, all of which are abstract-scale text.
+# Full-text PDF retrieval is slow, noisy, and would let a quote cite text a
+# reviewer cannot see.
+fetch_full_text: false
+cache_dir: references_cache
+
+# literal_bracket_patterns -- adopted wholesale from dismech-1
+# (conf/reference_validator_config.yaml), including the reasoning.
+#
+# By default the validator strips square-bracketed spans from the *quote* but
+# never from the *cached text*. That exists so a curator can gloss a quote
+# ("This pleiotropic cytokine [IL-6] is a key factor") or skip an inline
+# citation marker ("...as shown previously [12]"). But structured biomedical
+# abstracts also define abbreviations in brackets on first use, and a verbatim
+# quote spanning one then fails as "Text part not found as substring" -- which
+# reads as "the curator paraphrased", the single thing this validator exists to
+# catch. In dismech that cost four curation PRs before it was diagnosed.
+#
+#   ^[A-Z]{2,}$  an all-caps abbreviation defined in line: [APTT], [CI], [DTI].
+#                Letters only, so a gloss like [IL-6] is still stripped.
+#   %            any bracketed span carrying a percent sign: [62%],
+#                [95% CI 1.22-2.31]. A citation marker never contains one.
+#
+# Purely numeric content ([12], [3,4]) matches neither and is still stripped.
+literal_bracket_patterns:
+  - "^[A-Z]{2,}$"
+  - "%"
+
+# An unfetchable reference is reported but must not fail the run: NCBI rate
+# limiting and transient DNS failures are not curation errors. Genuine snippet
+# mismatches and wrong PMIDs are still ERRORs.
+unknown_prefix_severity: WARNING
+
+# Prefixes that are not fetchable literature and carry no quote to verify.
+skip_prefixes:
+  # COMPUTED_SCORE and MODEL_JUDGEMENT cite an internal run, not a publication.
+  - RDIDRUN
+  # STATE_POLICY_LIST cites a code on a published state list. The claim it
+  # carries lives in source_statement; there is nothing to fetch.
+  - ICD10CM
