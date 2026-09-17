@@ -25,6 +25,10 @@ prefixes:
   RDIDRUN: https://w3id.org/rare-disease-identification/run/
   SSACAL: https://secure.ssa.gov/apps10/poms.nsf/lnx/
   MTFRAIL: https://w3id.org/rare-disease-identification/montana-frail/
+  HP: http://purl.obolibrary.org/obo/HP_
+  HPOA: https://w3id.org/rare-disease-identification/hpoa/
+  RDIDAGENT: https://w3id.org/rare-disease-identification/agent/
+  ORCID: https://orcid.org/
 
 default_prefix: rdid
 default_range: string
@@ -122,6 +126,20 @@ enums:
         description: >-
           A language model's structured judgement from the disease description.
           Never sufficient alone; benchmarked against EXPERT_DATABASE before use.
+      PHENOTYPE_ANCHOR:
+        description: >-
+          Specific, functionally decisive HPO findings that HPOA curates as occurring in >=30%
+          of affected people - the same bar the impairment levels use. Structurally this is the
+          same kind of object as an Orphanet row (a named finding with a curated frequency), and
+          unlike COMPUTED_SCORE it cites the findings rather than a weighted sum of them.
+
+          Benchmarked against the 538-disease Orphanet validation set, the tightest usable rule
+          reaches a positive predictive value of only 59-65%, so this lane must never set a level
+          on its own: one assertion in three would be wrong. Its purpose is to make an UNKNOWN
+          legible - to say what the phenotype profile suggests and why it was not enough.
+
+          Derived from the same HPOA data as COMPUTED_SCORE, so the two are never independent
+          sources and this lane replaces rather than supplements that one.
       COMPUTED_SCORE:
         description: >-
           The phenotype-based score. A ranking signal, not a finding.
@@ -182,9 +200,10 @@ classes:
         description: >-
           Identifier for the evidence item. PMID:12345678, ORPHA:558,
           ICD10CM:G40.81, a state list name, or a model run id.
-        range: string
+        range: uriorcurie
         required: true
         slot_uri: dcterms:references
+        pattern: '^(PMID|DOI|PMC|ORPHA|ICD10CM|SSACAL|MTFRAIL|HPOA|RDIDRUN):\S+$'
         # `implements` as well as `slot_uri`: upstream field detection accepts
         # either, but the vendored snippet audit only reads `implements`.
         implements:
@@ -277,10 +296,20 @@ classes:
           the disease can be screened from claims or needs an attestation route.
         range: boolean
       icd10cm_codes:
-        range: string
+        description: >-
+          ICD-10-CM codes as CURIEs, never bare codes. A bare "E83.01" is not resolvable and
+          not checkable; ICD10CM:E83.01 expands through the prefix map and can be validated.
+        range: uriorcurie
         multivalued: true
+        pattern: '^ICD10CM:[A-Z][0-9A-Z.]+$'
       assessed_by:
-        range: string
+        description: >-
+          Agent or person that produced this assessment, as a resolvable identifier -
+          an ORCID for a human, or the versioned skill id for an agent. Never a bare name:
+          "N. Matentzoglu" and "curate-frailty skill" are not checkable, ORCID:0000-...
+          and RDIDAGENT:curate-frailty/2026-09-16 are.
+        range: uriorcurie
+        pattern: '^(ORCID|RDIDAGENT):\S+$'
       assessed_on:
         range: date
       notes:

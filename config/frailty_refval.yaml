@@ -44,3 +44,6 @@ skip_prefixes:
   # Montana lists conditions by NAME rather than code, so its rows carry no
   # identifier to resolve either - the statutory category is in source_statement.
   - MTFRAIL
+  # PHENOTYPE_ANCHOR cites the HPOA annotation set for a disease, not a document.
+  # The claim lives in source_statement; there is no quote and nothing to fetch.
+  - HPOA
