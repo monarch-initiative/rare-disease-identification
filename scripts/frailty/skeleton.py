@@ -9,6 +9,7 @@ Emits a YAML patch skeleton; nothing is written to the source list by this scrip
 """
 import argparse, csv, re, yaml, pathlib
 from common import (CACHE, TMP, RANKED, FC, ASSESSMENTS, cache_path)
+from anchors import term_scores, corpus, anchor_evidence
 
 SCORE_METHOD = "phenotype-wsum-norm"
 SCORE_VERSION = "2026-09-16"
@@ -210,6 +211,7 @@ def main():
 
     cal = cal_index()
     policy = policy_index()
+    scores, corp = term_scores(), corpus()
     patch = {}
     for r in rows:
         icd = [c for c in r["icd10cm"].split(";") if c]
@@ -222,7 +224,10 @@ def main():
                 ev += orpha_evidence(c, slot)
             ev += policy_evidence(prows)
             ev += cal_evidence(r["mondo_id"], slot, cal)
-            ev += score_evidence(r, slot)
+            anch = anchor_evidence(r["mondo_id"], slot, scores, corp)
+            # PHENOTYPE_ANCHOR is the same HPOA data as COMPUTED_SCORE, cited
+            # finding by finding. Never emit both: they are one source.
+            ev += anch if anch else score_evidence(r, slot)
             entry[slot] = {
                 "impairment": "UNKNOWN",
                 "score": float(r["work_score"] if slot == "work_capacity" else r["care_score"]),
@@ -235,7 +240,8 @@ def main():
                 "claims_selectable": bool(icd),
             }
             if icd:
-                entry[slot]["icd10cm_codes"] = icd
+                # CURIEs, never bare codes: a bare "E83.01" is not resolvable or checkable.
+                entry[slot]["icd10cm_codes"] = [f"ICD10CM:{c}" for c in icd]
         patch[r["mondo_id"]] = entry
 
     with open(args.output, "w", encoding="utf-8") as fh:
