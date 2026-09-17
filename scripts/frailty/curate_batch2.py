@@ -11,7 +11,7 @@ import yaml, pathlib
 from common import TMP, ASSESSMENTS
 
 TODAY = "2026-09-16"
-CURATOR = "curate-frailty skill (AI agent)"
+CURATOR = f"RDIDAGENT:curate-frailty/{TODAY}"
 
 def lit(ref, title, quote, population, explanation, strength="STRONG",
         direction="SUPPORTS"):
