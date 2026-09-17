@@ -35,9 +35,13 @@ The two sources are close to complementary rather than overlapping. Orphanet cov
 named syndromes; the literature covers whichever ultra-rare gene happened to get a natural-history
 study. Neither substitutes for the other.
 
-**Implication:** curating in score order spends most of the effort where nothing can be concluded
-— 1,027 of 1,200 assessments are `UNKNOWN`. Roughly 1,000 diseases have a cached Orphanet record;
-working that pool would convert far faster.
+**Implication:** curating in score order spends most of the effort where nothing can be concluded.
+**Correction (2026-09-17):** earlier versions of this log said "roughly 1,000 diseases have a
+cached Orphanet record". That was wrong — it conflated the size of the Orphanet dataset (1,048
+disorders) with its overlap with our list. **Only 381 of the 3,079 have a record, and 265 carry
+usable functional rows.** Projecting observed rates, curating the entire list would yield about
+**364 diseases with any assertable level — one in eight** — and ~2,700 `UNKNOWN`. That is the
+ceiling, and no ordering changes it.
 
 ## 2. The score's dominant failure is reading untreated natural history
 
@@ -206,6 +210,42 @@ Usher database, 23 were working and 24 were not. Two employment figures in 900 d
 study also carries a finding worth repeating wherever these levels are used — *having employment
 counteracted the health and financial risks associated with the disability*. The dataset measures
 whether people can work; it should not be read as saying whether they should.
+
+## 7c. The UNKNOWNs were not evidence-free — we were discarding the HPO annotations
+
+The single biggest self-inflicted problem found so far, and it took an outside question to see it.
+
+Of 779 `UNKNOWN` work assessments, **684 had four or more "anchor findings"** — clinician-scored
+decisive HPO terms that HPOA curates at >=30% frequency, the same bar the impairment levels use.
+FXTAS was recorded "no usable evidence" while annotated with *mental deterioration in 100%* and
+*dementia in 90%*. Myotonic dystrophy type 1 likewise.
+
+**Cause.** The spec framed HPO as one lane — `COMPUTED_SCORE`, correctly called weak because it is
+a weighted sum. That silently also excluded the *annotations the sum is computed from*, which are
+a different kind of object: individually curated, term-specific, frequency-qualified. Structurally
+identical to the Orphanet rows we treat as `STRONG`:
+
+```
+Orphanet : Moving around within the home | Very frequent | Severe | Permanent limitation
+HPOA     : Inability to walk (HP:0002540) | Very frequent
+```
+
+**But measuring it stopped us over-correcting.** Benchmarked on the 538-disease Orphanet
+validation set, the tightest usable rule reaches PPV **59% (work) / 65% (care)** against base
+rates of 25% / 16%. A 2.3–4.1x lift, and wrong one time in three — nowhere near enough to set a
+level. **So the `UNKNOWN`s were strictly accurate.** Two further constraints: anchors and the
+score are the same data, so they can never be two independent sources; and HPOA is partly
+Orphanet-derived, so the lane is not fully independent where an Orphanet record exists.
+
+**What was done.** A `PHENOTYPE_ANCHOR` lane at `MODERATE`, replacing the bare score line on
+1,511 `UNKNOWN` assessments. The level does not move. What changes is that an `UNKNOWN` now says
+what the phenotype profile suggests and why it was not enough — which turns 684 dead ends into a
+ranked expert-review queue where a clinician's thirty seconds converts a guess into a `STRONG`
+line. That is the highest-yield route to reducing the `UNKNOWN` count that exists.
+
+**The general lesson:** *a derived summary is not the same evidence as the things it was derived
+from.* Collapsing structured source data into a scalar and then judging the scalar weak discards
+the structure twice over. Worth checking wherever else this pipeline summarises before it cites.
 
 ## 8. What `UNKNOWN` is actually telling us
 
