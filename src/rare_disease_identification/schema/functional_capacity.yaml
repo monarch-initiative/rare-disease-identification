@@ -17,8 +17,11 @@ prefixes:
   rdid: https://w3id.org/rare-disease-identification/
   MONDO: http://purl.obolibrary.org/obo/MONDO_
   ORPHA: http://www.orpha.net/ORDO/Orphanet_
-  PMID: http://www.ncbi.nlm.nih.gov/pubmed/
+  PMID: http://identifiers.org/pubmed/
   ECO: http://purl.obolibrary.org/obo/ECO_
+  # linkml-lint prefers https://icd.codes/icd10cm/ here. Kept on the BioPortal
+  # namespace deliberately: it is what the Mondo xrefs and the state code lists
+  # both use, so changing it would break the join that populates this lane.
   ICD10CM: http://purl.bioontology.org/ontology/ICD10CM/
   oa: http://www.w3.org/ns/oa#
   dcterms: http://purl.org/dc/terms/
@@ -28,7 +31,7 @@ prefixes:
   HP: http://purl.obolibrary.org/obo/HP_
   HPOA: https://w3id.org/rare-disease-identification/hpoa/
   RDIDAGENT: https://w3id.org/rare-disease-identification/agent/
-  ORCID: https://orcid.org/
+  ORCID: http://identifiers.org/orcid/
 
 default_prefix: rdid
 default_range: string
@@ -187,15 +190,43 @@ classes:
       which way it points, how strong, and the item itself.
     attributes:
       lane:
+        description: >-
+          Which of the independent sources this line came from. Two lines from the same lane
+          never satisfy the two-source rule for SUBSTANTIAL.
         range: EvidenceLaneEnum
         required: true
       direction:
         range: EvidenceDirectionEnum
         required: true
         ifabsent: string(SUPPORTS)
+        description: >-
+          HOW TO POPULATE. Direction is about the LEVEL, not about disease severity - a line can
+          describe a devastating disease and still argue the level down.
+
+          For Orphanet rows, map frequency onto the >=30% bar the levels use: "Very frequent"
+          and "Frequent" clear it and SUPPORT; "Occasional" sits below it and DISPUTES, however
+          severe the limitation. Severity "Low" or "Unspecified" also DISPUTES, because a
+          frequency without a severity carries no claim. Temporality matters equally: a
+          "Transient" limitation in a relapsing or episodic disease DISPUTES a permanent level.
+
+          A treatment line that reports recovery, or outcomes only achieved under therapy,
+          DISPUTES an assessment built on untreated natural history.
       strength:
         range: EvidenceStrengthEnum
         required: true
+        description: >-
+          HOW TO POPULATE. This slot gates which levels are reachable, so calibrate it before
+          the level, not after.
+
+          * STRONG - a direct measurement in an identified human cohort of n >= 20, or a named
+            expert's rating of this specific disease (Orphanet with StatusDisability Validated
+            AND an expert named in SourceOfValidation).
+          * MODERATE - a cohort under ~20, a single centre, a narrative review, a
+            related-disease proxy, a non-expert-validated Orphanet record, a policy listing, or
+            a PHENOTYPE_ANCHOR line.
+          * WEAK - inference, expert opinion without data, model output, or the phenotype score.
+
+          If you find yourself reaching for STRONG to unlock TOTAL, that is the signal to stop.
       reference:
         description: >-
           Identifier for the evidence item. PMID:12345678, ORPHA:558,
@@ -241,10 +272,18 @@ classes:
         description: Evidence & Conclusion Ontology term, where one fits.
         range: uriorcurie
       curator:
+        description: >-
+          Optional attribution for this individual line, where it differs from the
+          assessment-level assessed_by. Same identifier rules apply.
         range: string
       curator_type:
+        description: >-
+          Who produced this line. PIPELINE lines are pure functions of a source file and are
+          regenerated on every build rather than trusted - an agent must never write or edit
+          one. AI_AGENT and HUMAN lines carry judgement and cannot be regenerated.
         range: CuratorTypeEnum2
       retrieved_on:
+        description: Date the cited source was fetched into references_cache/.
         range: date
 
   FunctionalCapacityAssessment:
@@ -256,7 +295,28 @@ classes:
       impairment:
         range: ImpairmentLevelEnum
         required: true
-        description: The headline judgement.
+        description: >-
+          The headline judgement.
+
+          HOW TO POPULATE. Not deterministic, so the rules are here rather than in a skill,
+          because a reviewer disagreeing with a level needs to see the rule that produced it.
+          Set the level from the evidence, never from `score`:
+
+          * TOTAL - requires at least one line with strength STRONG. If the clinical picture
+            looks total but no STRONG line exists, set SUBSTANTIAL and say so in `rationale`;
+            do not promote a MODERATE line to reach the level you expected.
+          * SUBSTANTIAL - requires two lines from DIFFERENT lanes agreeing. PHENOTYPE_ANCHOR and
+            COMPUTED_SCORE are the same HPOA data and never count as two.
+          * MILD / NONE - the evidence positively argues for a low level. Not a default.
+          * VARIABLE - the outcome genuinely splits by subtype, stage or treatment access, and
+            the evidence says so. Name what it varies with in `rationale`.
+          * NOT_APPLICABLE - work_capacity only, where the disease is near-universally lethal
+            before working age. Care dependence still applies.
+          * UNKNOWN - fewer than two qualifying lines. `rationale` must then state what was
+            searched. This is a completed curation, not a skipped one.
+
+          Lanes that disagree are never averaged: set `curation_status: DISPUTED`, state both
+          sides in `rationale`, and stop.
       score:
         range: float
         description: Computed phenotype score that proposed this. Ranking signal only.
@@ -267,26 +327,60 @@ classes:
         description: Version or date of the scoring run, so a number can be reproduced.
         range: string
       model_confidence:
-        description: Language-model confidence 0-100 from the MODEL_JUDGEMENT lane.
+        description: >-
+          Language-model confidence 0-100 from the MODEL_JUDGEMENT lane.
+
+          HOW TO POPULATE. This is the model's confidence in the LEVEL it set, not in the
+          disease being severe. It must never be used to justify a level - it is recorded so a
+          reviewer can see where the agent was unsure, and so disagreements can be sorted by it.
+          Expect low values (30-45) on UNKNOWN and on any level capped by evidence strength
+          rather than by the clinical picture.
         range: integer
         minimum_value: 0
         maximum_value: 100
       care_context:
+        description: >-
+          Which course this assessment describes.
+
+          HOW TO POPULATE. Ask what the evidence actually measured. If every line describes the
+          course before treatment existed or without access to it, this is
+          UNTREATED_NATURAL_HISTORY and the assessment must not reach a policy artefact. If the
+          lines describe outcomes under current standard of care - including newborn screening,
+          enzyme replacement, gene therapy or surgery - it is STANDARD_OF_CARE_TREATED. When the
+          sources disagree about which course they describe, that is itself grounds for VARIABLE
+          on the level. Never leave this at UNKNOWN when a level has been set.
         range: CareContextEnum
         required: true
       life_stage:
+        description: >-
+          The life stage this assessment applies to. Use PRE_MANIFEST_EXCLUDED for late-onset
+          genetic disease where carriers before onset have no limitation, and
+          PROGRESSIVE_LATE_STAGE where the level describes the advanced course rather than onset.
         range: LifeStageEnum
       rationale:
         description: >-
-          Two or three sentences a clinician would recognise. Say what drives the
-          level, and name the strongest disagreeing evidence if there is any.
+          Two or three sentences a clinician would recognise. Say what drives the level, and
+          name the strongest disagreeing evidence if there is any.
+
+          HOW TO POPULATE. It must be possible to check the level against this text alone.
+          State (a) which line carries the level, (b) any line that argues the other way and
+          why it did not win, and (c) if the level is capped by evidence strength rather than
+          by the clinical picture, say so explicitly so a reviewer can raise it deliberately.
+          For UNKNOWN, state what was searched and found absent. Do not restate the disease
+          description; a reviewer already has it.
         range: string
         required: true
       evidence:
+        description: >-
+          Every line consulted, including those that argue against the level. Disagreement is
+          recorded here rather than resolved away.
         range: FunctionalCapacityEvidence
         multivalued: true
         inlined_as_list: true
       curation_status:
+        description: >-
+          Lifecycle state. AI_CURATED is the ceiling for an agent - only a named human sets
+          EXPERT_REVIEWED. Use DISPUTED when sources conflict and stop rather than averaging.
         range: FCCurationStatusEnum
         required: true
         ifabsent: string(UNREVIEWED)
@@ -311,6 +405,12 @@ classes:
         range: uriorcurie
         pattern: '^(ORCID|RDIDAGENT):\S+$'
       assessed_on:
+        description: >-
+          Date this assessment was made. Load-bearing for provenance: it identifies which
+          Orphanet and HPOA release the derived lines were computed against.
         range: date
       notes:
+        description: >-
+          Free text for anything that does not belong in rationale - open questions for a
+          reviewer, subtype splits worth considering. Never used to justify the level.
         range: string
