@@ -1,0 +1,18 @@
+row_id	mondo_id	mondo_label	already_on_list	mondo_subsets	n_descendants_total	n_descendants_on_list	nearest_on_list_ancestor	icd10cm_anchors_in_play	prior_position	fill_include_on_list	fill_level_is_right	fill_rationale
+LM-001	MONDO:0001516	spinal muscular atrophy	no	doid_rare;gard_rare;ncit_rare;nord_rare;otar;rare	59	22		G12.0;G12.1;G12.8;G12.9;G12.20;G12.24;G12.25;G12.29	bpow: no explicit list verdict; ruled on the codes only.			
+LM-002	MONDO:0002457	Treacher-Collins syndrome	no	clingen;doid_rare;gard_rare;ncit_rare;nord_rare;ordo_disorder;ordo_malformation_syndrome;orphanet_rare;otar;prototype_pattern;rare	4	4		Q75.4	bpow: 'NO (use mandibulofacial dysostosis below)' — a verdict on Q75.4.			
+LM-003	MONDO:0007838	Jacobsen syndrome	no	doid_rare;gard_rare;ncit_rare;nord_rare;ordo_disorder;ordo_malformation_syndrome;orphanet_rare;otar;rare	0	0		Q93.59	bpow: 'NO (not specific enough)' — a verdict on Q93.59.			
+LM-004	MONDO:0008006	Moebius syndrome	no	doid_rare;gard_rare;ncit_rare;nord_rare;ordo_disorder;orphanet_rare;otar;rare	1	0		Q87.0	bpow: 'NO (not specific enough)' — a verdict on Q87.0.			
+LM-005	MONDO:0018068	trisomy 13	no	gard_rare;nord_rare;ordo_disorder;ordo_malformation_syndrome;orphanet_rare;otar;rare	2	0		Q91.4;Q91.5;Q91.6;Q91.7	bpow: 'YES'.			
+LM-006	MONDO:0018071	trisomy 18	no	gard_rare;nord_rare;ordo_disorder;ordo_malformation_syndrome;orphanet_rare;otar;rare	2	0		Q91.0;Q91.1;Q91.2;Q91.3	bpow: 'YES'.			
+LM-007	MONDO:0018923	22q11.2 deletion syndrome	no	gard_rare;ordo_disorder;ordo_malformation_syndrome;orphanet_rare;otar;rare	4	2		D82.1;Q93.81	bpow: 'YES'.			
+LM-008	MONDO:0019118	inherited retinal dystrophy	no	clingen;disease_grouping;gard_rare;ordo_group_of_disorders;otar;rare	353	25		H35.5	bpow: 'YES'. Tagged disease_grouping by Mondo.			
+LM-009	MONDO:0019188	Rubinstein-Taybi syndrome	no	clingen;doid_rare;gard_rare;ncit_rare;nord_rare;ordo_disorder;ordo_malformation_syndrome;orphanet_rare;otar;rare	4	2		Q87.2	bpow: 'NO (not specific enough)' — a verdict on Q87.2.			
+LM-010	MONDO:0021061	neurofibromatosis	no	doid_rare;gard_rare;nord_rare;otar;rare	13	4		Q85.0;Q85.00;Q85.09	bpow: 'NO (split as below)'.			
+LM-011	MONDO:0015483	mandibulofacial dysostosis	no	disease_grouping;gard_rare;nord_rare;ordo_group_of_disorders;otar;rare	14	10		Q75.4	bpow: 'YES'.			
+LM-012	MONDO:0016669	sickle cell-hemoglobin c disease syndrome	no	gard_rare;nord_rare;ordo_disorder;orphanet_rare;otar;rare	0	0	MONDO:0011382 sickle cell disease	D57.2	bpow: 'YES'.			
+LM-013	MONDO:0016668	sickle cell-beta-thalassemia disease syndrome	no	gard_rare;nord_rare;ordo_disorder;orphanet_rare;otar;rare	2	0		D57.4	bpow: 'YES'.			
+LM-014	MONDO:0019259	classic phenylketonuria	no	gard_rare;ordo_subtype_of_a_disorder;otar;rare	0	0	MONDO:0009861 phenylketonuria;MONDO:0019052 inborn errors of metabolism;MONDO:0019189 inborn disorder of amino acid and other organic acid metabolism	E70.0	bpow: 'YES'.			
+LM-015	MONDO:0018975	neurofibromatosis type 1	yes	clingen;doid_rare;gard_rare;ordo_disorder;orphanet_rare;otar;rare	3	0		Q85.01	bpow: 'YES'. Already on the list.			
+LM-016	MONDO:0007039	NF2-related schwannomatosis	yes	clingen;doid_rare;gard_rare;ordo_disorder;orphanet_rare;otar;rare	0	0		Q85.02	bpow: 'YES'. Already on the list.			
+LM-017	MONDO:0008075	schwannomatosis	no	doid_rare;gard_rare;nord_rare;ordo_disorder;orphanet_rare;otar;rare	4	2		Q85.03	bpow: 'YES (probably)'.			
