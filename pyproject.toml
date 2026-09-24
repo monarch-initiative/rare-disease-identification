@@ -17,4 +17,8 @@ dependencies = [
 where = ["src"]
 
 [dependency-groups]
-dev = []
+dev = [
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+    "pillow>=10.0",
+]

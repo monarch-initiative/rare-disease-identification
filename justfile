@@ -4,8 +4,19 @@ SCHEMA := "src/rare_disease_identification/schema/rare_disease_prioritisation.ya
 DATAMODEL_DIR := "src/rare_disease_identification/datamodel"
 SOURCE := "src/prioritised-rare-disease-list.yml"
 DRUGS := "data/drugs.yml"
+FCEVIDENCE := "data/functional_capacity.yml"
+VALUE_SETS := "data/value_sets.yml"
+MAPPINGS := "mappings"
 MEDIC_DIR := "../medic"
 OUTPUT := "prioritised-rare-disease-list.yml"
+CRITERIA := "config/prioritisation_criteria.yaml"
+CRITERIA_JSON := "criteria.json"
+CRITERIA_REPORT := "docs/criteria-assignment.md"
+FIGURES := "docs/figures"
+ICON_DIR := "site/assets/criteria"
+# Page 1 of the manuscript's workflow figure. Not redistributed (background/ is
+# gitignored); pull it out of the docx with `unzip -j <draft>.docx word/media/image4.png`.
+WORKFLOW_FIGURE := "background/prioritisation-workflow-figure.png"
 SUMMARY := "category_summary.yml"
 TMP_DIR := "tmp"
 MONDO_OBO := TMP_DIR / "mondo.obo"
@@ -14,8 +25,8 @@ MONDO_OBO_URL := "https://purl.obolibrary.org/obo/mondo.obo"
 # Default recipe
 default: all
 
-# Full pipeline: setup, generate datamodel, build drugs, merge
-all: setup gen-datamodel build-drugs merge
+# Full pipeline: build drugs and value sets, merge, score against the six criteria
+all: setup gen-datamodel build-drugs build-value-sets build-functional-capacity merge build-criteria
 
 # Install Python dependencies via uv
 setup:
@@ -28,10 +39,43 @@ gen-datamodel: setup
     uv run gen-python {{SCHEMA}} > {{DATAMODEL_DIR}}/rare_disease_prioritisation.py
     touch {{DATAMODEL_DIR}}/__init__.py
 
-# Download mondo.obo into the tmp/ directory if it isn't already there
+# Download mondo.obo, refreshing it whenever the release has moved on
 fetch-mondo:
+    #!/usr/bin/env bash
+    set -euo pipefail
     mkdir -p {{TMP_DIR}}
-    test -f {{MONDO_OBO}} || curl -L -o {{MONDO_OBO}} {{MONDO_OBO_URL}}
+    part="{{MONDO_OBO}}.part"
+    etag="{{MONDO_OBO}}.etag"
+    # Conditional GET: one round trip, and the 53MB body only crosses the wire
+    # when the release has actually changed. Never guard on mere existence --
+    # a stale mondo.obo silently poisons every recipe downstream of it.
+    args=(-sSL --retry 3 --retry-delay 2 -o "$part" --etag-save "$etag.new")
+    if [ -s "{{MONDO_OBO}}" ] && [ -s "$etag" ]; then
+        args+=(--etag-compare "$etag")
+    fi
+    code=$(curl "${args[@]}" -w '%{http_code}' "{{MONDO_OBO_URL}}")
+    if [ "$code" = "304" ]; then
+        rm -f "$part" "$etag.new"
+        echo "mondo.obo is current ($(grep -m1 '^data-version:' {{MONDO_OBO}}))"
+        exit 0
+    fi
+    # Refuse to overwrite a good file with a redirect page or a truncated body.
+    if [ ! -s "$part" ] || [ "$(wc -c < "$part")" -lt 10000000 ] \
+       || ! head -50 "$part" | grep -q '^data-version:'; then
+        rm -f "$part" "$etag.new"
+        echo "fetch-mondo: download failed or did not look like mondo.obo (HTTP $code)" >&2
+        exit 1
+    fi
+    mv "$part" "{{MONDO_OBO}}"
+    mv "$etag.new" "$etag"
+    echo "mondo.obo updated ($(grep -m1 '^data-version:' {{MONDO_OBO}}))"
+
+# Assert mondo.obo is present without touching the network, for offline recipes
+require-mondo:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    test -s "{{MONDO_OBO}}" || { echo "{{MONDO_OBO}} is missing; run \`just fetch-mondo\`" >&2; exit 1; }
+    echo "using {{MONDO_OBO}} ($(grep -m1 '^data-version:' {{MONDO_OBO}}))"
 
 # Update MONDO category fields via ontology ancestor traversal
 update-categories: fetch-mondo
@@ -47,12 +91,82 @@ build-drugs:
         --diseases "{{SOURCE}}" \
         --output "{{DRUGS}}"
 
-# Merge source disease list with drug data into final output
+# Regenerate derived (exact, narrower) ICD-10-CM value sets from Mondo
+build-value-sets: fetch-mondo
+    uv run python -m rare_disease_identification.build_value_sets \
+        --diseases "{{SOURCE}}" \
+        --mondo-obo "{{MONDO_OBO}}" \
+        --overlay "{{MAPPINGS}}/mondo_icd10cm_exactmatch_mendelian.sssom.tsv" \
+        --overlay "{{MAPPINGS}}/mondo_icd10cm_grouping_mendelian.sssom.tsv" \
+        --retract "{{MAPPINGS}}/retractions.tsv" \
+        --output "{{VALUE_SETS}}"
+
+# Regenerate value sets without calling the NLM API (CI and offline work)
+build-value-sets-offline: require-mondo
+    uv run python -m rare_disease_identification.build_value_sets \
+        --diseases "{{SOURCE}}" \
+        --mondo-obo "{{MONDO_OBO}}" \
+        --overlay "{{MAPPINGS}}/mondo_icd10cm_exactmatch_mendelian.sssom.tsv" \
+        --overlay "{{MAPPINGS}}/mondo_icd10cm_grouping_mendelian.sssom.tsv" \
+        --retract "{{MAPPINGS}}/retractions.tsv" \
+        --output "{{VALUE_SETS}}" \
+        --offline
+
+# Merge source disease list with drug and value-set data into final output
+# Derive the computable evidence lines of each functional-capacity assessment.
+# EXPERT_DATABASE, the two policy lanes, PHENOTYPE_ANCHOR and COMPUTED_SCORE are
+# functions of their source files, so they are regenerated rather than stored in
+# SOURCE. Never writes to SOURCE; `merge` re-attaches them.
+build-functional-capacity:
+    uv run python -m rare_disease_identification.build_functional_capacity \
+        -s "{{SOURCE}}" -o "{{FCEVIDENCE}}"
+
+# One-off migration: drop derived evidence lines from the curated source
+strip-derived-evidence:
+    cd {{FRAILTY}} && uv run python strip_derived_evidence.py
+
 merge:
     uv run python -m rare_disease_identification.merge \
         -s "{{SOURCE}}" \
         -d "{{DRUGS}}" \
+        -v "{{VALUE_SETS}}" \
+        -f "{{FCEVIDENCE}}" \
         -o "{{OUTPUT}}"
+
+# ---------------------------------------------------------------- prioritisation criteria
+# One config, config/prioritisation_criteria.yaml, decides which registry field
+# counts as evidence for which of the six criteria. Everything below reads it.
+
+# Score every disease against the six criteria -> criteria.json + the review document
+build-criteria:
+    uv run python -m rare_disease_identification.build_criteria \
+        --diseases "{{OUTPUT}}" \
+        --criteria "{{CRITERIA}}" \
+        --output "{{CRITERIA_JSON}}" \
+        --report "{{CRITERIA_REPORT}}"
+
+# Upset plot over the six criteria, plus the full intersection table
+upset: build-criteria
+    uv run python scripts/figures/plot_criteria_upset.py \
+        --criteria-json "{{CRITERIA_JSON}}" \
+        --icon-dir "{{ICON_DIR}}" \
+        --output-dir "{{FIGURES}}"
+
+# Self-contained, shareable HTML report of the six criteria -> docs/criteria-report.html
+criteria-report: build-criteria
+    uv run python -m rare_disease_identification.build_criteria_report \
+        --criteria "{{CRITERIA}}" \
+        --criteria-json "{{CRITERIA_JSON}}" \
+        --icon-dir "{{ICON_DIR}}" \
+        --figure-dir "{{FIGURES}}" \
+        --output "docs/criteria-report.html"
+
+# Re-cut the six criterion glyphs from the workflow figure (the cut icons are committed)
+criteria-icons:
+    uv run python scripts/figures/extract_criteria_icons.py \
+        --figure "{{WORKFLOW_FIGURE}}" \
+        --criteria "{{CRITERIA}}" \
+        --output-dir "{{ICON_DIR}}"
 
 # Serve the site locally for development
 serve:
@@ -60,7 +174,7 @@ serve:
 
 # Clean generated files
 clean:
-    rm -rf .venv/ {{DATAMODEL_DIR}} {{OUTPUT}} {{TMP_DIR}}
+    rm -rf .venv/ {{DATAMODEL_DIR}} {{OUTPUT}} {{CRITERIA_JSON}} {{TMP_DIR}}
 
 # ---------------------------------------------------------------- frailty curation
 FRAILTY := "scripts/frailty"
@@ -84,8 +198,8 @@ fetch-reference +refs:
 # checks performed - a clean run and a no-op look identical without the audit.
 #
 # Every quote checked verbatim against its cached reference
-verify-frailty-quotes:
-    bash {{FRAILTY}}/run_reference_validator.sh validate data "{{SOURCE}}" \
+verify-frailty-quotes: build-functional-capacity merge
+    bash {{FRAILTY}}/run_reference_validator.sh validate data "{{OUTPUT}}" \
         --schema "{{SCHEMA}}" --target-class RareDiseaseCollection \
         --config "{{REFCONFIG}}" 2>&1 | grep -v fontTools
 
