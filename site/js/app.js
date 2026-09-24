@@ -12,6 +12,11 @@
     // Flip to true to re-enable filter, badge, and detail-row.
     var SHOW_PREVALENCE = false;
 
+    var CRITERIA_URL = "data/criteria.json";
+    var criteriaSpec = [];      // the six criterion definitions, in figure order
+    var criteriaIndex = {};     // mondo_id -> {met, met_direct, signals}
+    var criteriaMeta = {};      // version / generated_on, shown in the header
+
     var allDiseases = [];
     var filtered = [];
     var currentPage = 1;
@@ -22,6 +27,7 @@
         functional: new Set(),
         category: new Set(),
         hpo: new Set(),
+        criteria: new Set(),
     };
     var searchQuery = "";
     var searchTimeout = null;
@@ -130,8 +136,9 @@
             '<div class="loading">Loading disease data...</div>';
 
         // Load EPM and data in parallel
-        var [epmResp, dataResp] = await Promise.all([
+        var [epmResp, critResp, dataResp] = await Promise.all([
             fetch(EPM_URL).catch(function () { return null; }),
+            fetch(CRITERIA_URL).catch(function () { return null; }),
             fetch(DATA_URL),
         ]);
 
@@ -140,24 +147,93 @@
             buildPrefixMap(epm);
         }
 
+        // The criteria file is what turns the card into six sections. Without it the
+        // page still lists diseases, but says so rather than silently losing structure.
+        if (critResp && critResp.ok) {
+            var crit = await critResp.json();
+            criteriaSpec = (crit.criteria || []).slice().sort(function (a, b) { return a.number - b.number; });
+            criteriaIndex = crit.assignments || {};
+            criteriaMeta = { version: crit.criteria_version, generated_on: crit.generated_on };
+        }
+
         var text = await dataResp.text();
         var data = jsyaml.load(text);
         allDiseases = data.diseases || [];
         filtered = allDiseases;
         renderHeaderStats();
+        renderCriteriaBrief();
         buildAllFilters();
         render();
     }
 
     function renderHeaderStats() {
         var el = document.getElementById("header-stats");
-        el.innerHTML =
-            '<span class="header-stat"><strong>' + allDiseases.length.toLocaleString() + '</strong> diseases</span>';
+        var html = '<span class="header-stat"><strong>' + allDiseases.length.toLocaleString() + '</strong> diseases</span>';
+        if (criteriaSpec.length > 0) {
+            html += '<span class="header-stat"><strong>' + criteriaSpec.length +
+                '</strong> prioritisation criteria, version ' + esc(criteriaMeta.version || "?") + '</span>';
+        } else {
+            html += '<span class="header-stat warn">criteria.json did not load &mdash; ' +
+                'disease records are shown without their criteria sections</span>';
+        }
+        el.innerHTML = html;
+    }
+
+    // The "how this list was built" list in the page intro. Built from the same
+    // criterion definitions as the card sections, so the two always agree on what
+    // the six criteria are and what order they come in.
+    function renderCriteriaBrief() {
+        var el = document.getElementById("criteria-brief");
+        if (!el) return;
+        if (criteriaSpec.length === 0) { el.remove(); return; }
+        el.innerHTML = criteriaSpec.map(function (c) {
+            return '<li style="--c:' + c.colour + '"><div class="brief-row">' +
+                '<img src="assets/criteria/' + esc(c.icon) + '" alt="" width="22" height="22">' +
+                '<div><span class="brief-name">' + esc(c.label) + '</span>' +
+                '<span class="brief-tag">' + esc(c.tagline) + '</span>' +
+                '<p>' + esc(c.curation_method) + '</p>' +
+                '</div></div></li>';
+        }).join("");
     }
 
     // -- Filters --
 
+    function buildCriteriaFilter() {
+        var container = document.getElementById("filter-criteria");
+        if (!container) return;
+        container.innerHTML = "";
+        if (criteriaSpec.length === 0) { container.textContent = "unavailable"; return; }
+        criteriaSpec.forEach(function (c) {
+            var n = 0;
+            allDiseases.forEach(function (d) {
+                if ((criteriaIndex[d.mondo_id] || { met: [] }).met.indexOf(c.id) !== -1) n++;
+            });
+            var label = document.createElement("label");
+            label.className = "filter-item criterion-filter";
+            label.style.setProperty("--c", c.colour);
+            var cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.addEventListener("change", function () { toggleFilter("criteria", c.id, cb.checked); });
+            label.appendChild(cb);
+            var img = document.createElement("img");
+            img.src = "assets/criteria/" + c.icon;
+            img.width = 16; img.height = 16; img.alt = "";
+            label.appendChild(img);
+            var span = document.createElement("span");
+            span.className = "filter-label";
+            span.textContent = c.number + ". " + c.label;
+            span.title = c.tagline;
+            label.appendChild(span);
+            var count = document.createElement("span");
+            count.className = "count";
+            count.textContent = n.toLocaleString();
+            label.appendChild(count);
+            container.appendChild(label);
+        });
+    }
+
     function buildAllFilters() {
+        buildCriteriaFilter();
         buildFilterGroup("filter-prioritization", "prioritization",
             function (d) { return d.prioritization_category || "unknown"; }, PRIORITIZATION_LABELS);
         if (SHOW_PREVALENCE) {
@@ -254,6 +330,14 @@
 
     function applyFilters() {
         filtered = allDiseases.filter(function (d) {
+            if (activeFilters.criteria.size > 0) {
+                var met = (criteriaIndex[d.mondo_id] || { met: [] }).met;
+                var wanted = Array.from(activeFilters.criteria);
+                // AND across checked criteria: "show me diseases that meet all of these".
+                for (var ci = 0; ci < wanted.length; ci++) {
+                    if (met.indexOf(wanted[ci]) === -1) return false;
+                }
+            }
             if (activeFilters.prioritization.size > 0 &&
                 !activeFilters.prioritization.has(d.prioritization_category || "unknown"))
                 return false;
@@ -329,202 +413,327 @@
         renderPagination();
     }
 
-    function renderCard(d) {
-        var prioClass = d.prioritization_category || "";
-        var prevCat = d.prevalence_category || "";
-        var prevLabel = PREVALENCE_LABELS[prevCat] || prevCat;
-        var prevClass = prevCat.startsWith("H") ? "prevalence-h" : "prevalence-l";
-        var hasIndications = d.indications && d.indications.length > 0;
-        var hasContraindications = d.contraindications && d.contraindications.length > 0;
-        var hasResearch = d.research && d.research.length > 0;
+    // ---------------------------------------------------------------- Criteria layout
+    //
+    // The six prioritisation criteria from the manuscript's workflow figure are the
+    // card's primary structure: one colour-coded band per criterion, in figure order,
+    // each carrying the registry fields that count as its evidence. Which field goes
+    // in which band is NOT decided here -- it comes from the `display` block of
+    // config/prioritisation_criteria.yaml, shipped inside criteria.json. Adding a
+    // field to a criterion is a config edit plus, at most, a new renderer below.
 
+    var DISPLAY_FLAGS = { show_prevalence: false };
+
+    function criterionAssignment(d) {
+        return criteriaIndex[d.mondo_id] || { met: [], met_direct: [], signals: [] };
+    }
+
+    function renderCriteriaMeter(d) {
+        if (criteriaSpec.length === 0) return "";
+        var a = criterionAssignment(d);
+        var met = new Set(a.met);
+        var html = '<div class="criteria-meter">';
+        html += '<div class="meter-chips">';
+        criteriaSpec.forEach(function (c) {
+            var on = met.has(c.id);
+            var tip = c.number + ". " + c.label + " — " + (on ? "met" : "not met") +
+                ". " + c.tagline + ".";
+            html += withTip(
+                '<span class="meter-chip' + (on ? " on" : "") + '" style="--c:' + c.colour + '">' +
+                '<img src="assets/criteria/' + esc(c.icon) + '" alt="" width="18" height="18">' +
+                '</span>', tip);
+        });
+        html += '</div>';
+        html += '<span class="meter-count"><strong>' + met.size + '</strong> of ' +
+            criteriaSpec.length + ' criteria</span>';
+        html += '</div>';
+        return html;
+    }
+
+    // -- field renderers, keyed by the `render` value in the config --
+
+    function valuesOf(d, item) {
+        var v = d[item.field];
+        if (v === undefined || v === null) return [];
+        return Array.isArray(v) ? v : [v];
+    }
+
+    var FIELD_RENDERERS = {
+        terms: function (d, item) {
+            var list = valuesOf(d, item);
+            if (list.length === 0) return "";
+            return '<div class="category-list">' +
+                list.map(function (t) { return renderTermPill(t, item.kind || "mondo"); }).join("") +
+                '</div>';
+        },
+        strings: function (d, item) {
+            var list = valuesOf(d, item).map(String);
+            if (item.values) list = list.filter(function (s) { return item.values.indexOf(s) !== -1; });
+            if (list.length === 0) return "";
+            return '<div class="category-list">' + list.map(function (s) {
+                return '<span class="category-pill histopheno">' + esc(s.replace(/_/g, " ")) + '</span>';
+            }).join("") + '</div>';
+        },
+        labels: function (d, item) {
+            var list = valuesOf(d, item).map(String).filter(function (s) {
+                return !item.values || item.values.indexOf(s) !== -1;
+            });
+            if (list.length === 0) return "";
+            return '<div class="category-list">' + list.map(function (s) {
+                return '<span class="curated-label">' + esc(s) + '</span>';
+            }).join("") + '</div>';
+        },
+        codes: function (d, item) {
+            var re = item.filter ? new RegExp(item.filter) : null;
+            var list = valuesOf(d, item).map(String).filter(function (s) { return !re || re.test(s); });
+            if (list.length === 0) return "";
+            return '<div class="code-list">' + list.map(renderCurieLink).join(" ") + '</div>';
+        },
+        text: function (d, item) {
+            var v = d[item.field];
+            if (!v) return "";
+            return '<p class="field-text">' + (searchQuery ? highlightText(String(v), searchQuery) : esc(String(v))) + '</p>';
+        },
+        number: function (d, item) {
+            var v = d[item.field];
+            if (v === undefined || v === null) return "";
+            var n = Number(v);
+            var text = item.decimals != null ? n.toFixed(item.decimals) : String(v);
+            return '<p class="field-number">' + esc(text + (item.suffix || "")) + '</p>';
+        },
+        enum: function (d, item) {
+            var v = d[item.field];
+            if (!v) return "";
+            var label = (item.enum === "prevalence" && PREVALENCE_LABELS[v]) || String(v).replace(/_/g, " ");
+            var tip = (item.enum === "prevalence" && PREVALENCE_TOOLTIPS[v]) || "";
+            var cls = item.enum === "prevalence" ?
+                (String(v).charAt(0) === "H" ? "prevalence-h" : "prevalence-l") : "";
+            return '<div class="category-list">' +
+                withTip('<span class="tag ' + cls + '">' + esc(label) + '</span>', tip) + '</div>';
+        },
+        value_set: function (d, item) {
+            var sets = d.value_sets || [];
+            var tiers = item.tiers || ["exact"];
+            var html = "";
+            sets.forEach(function (vs) {
+                tiers.forEach(function (tier) {
+                    var codes = vs[tier] || [];
+                    if (codes.length === 0) return;
+                    html += '<div class="value-set-tier"><span class="tier-name">' + esc(tier) +
+                        '</span><div class="code-list">';
+                    html += codes.map(function (c) {
+                        var label = c.label ? ' <span class="code-label">' + esc(c.label) + '</span>' : "";
+                        // Excluded codes carry a reason, proxy codes a basis; both say
+                        // why the code is in that tier and neither may be dropped.
+                        var why = c.reason || c.basis || "";
+                        var inner = renderCurieLink(c.code) + label;
+                        return '<span class="value-set-code">' +
+                            (why ? withTip(inner, why) : inner) + '</span>';
+                    }).join(" ");
+                    html += '</div></div>';
+                });
+            });
+            return html;
+        },
+        functional: function (d, item) {
+            var a = d[item.field];
+            if (!a) return "";
+            var axis = FC_AXES.filter(function (ax) { return ax[0] === item.field; })[0];
+            return renderFcAssessment(item.field, axis ? axis[1] : item.label,
+                axis ? axis[2] : "", a);
+        },
+        drugs: function (d, item, diseaseCtx) {
+            var items = d[item.field] || [];
+            if (items.length === 0) return "";
+            var fn = { indications: renderIndicationEntry,
+                       contraindications: renderContraindicationEntry,
+                       research: renderResearchEntry }[item.kind] || renderIndicationEntry;
+            return renderCollapsibleSection(item.kind, items,
+                item.label + " (" + items.length + ")", fn, diseaseCtx);
+        }
+    };
+
+    function renderDisplayField(d, item, diseaseCtx) {
+        if (item.requires_flag && !DISPLAY_FLAGS[item.requires_flag]) return "";
+        var fn = FIELD_RENDERERS[item.render];
+        if (!fn) return "";
+        var body = fn(d, item, diseaseCtx);
+        if (!body) return "";
+        // Drug sections and functional-capacity blocks carry their own heading.
+        if (item.render === "drugs" || item.render === "functional") {
+            return '<div class="criterion-block">' + body + '</div>';
+        }
+        var id = "fld-" + Math.random().toString(36).slice(2, 8);
+        var collapsed = item.collapsible ? ' collapsible' : "";
+        var html = '<div class="criterion-field' + collapsed + '">';
+        if (item.collapsible) {
+            html += '<button class="field-toggle" onclick="toggleSection(\'' + id + '\', this)">' +
+                '<span class="arrow">&#9654;</span> ' + esc(item.label) + '</button>';
+            html += '<div class="section-content" id="' + id + '">' + body + '</div>';
+        } else {
+            html += '<div class="field-label">' + esc(item.label) + '</div>';
+            html += '<div class="field-value">' + body + '</div>';
+        }
+        return html + '</div>';
+    }
+
+    function renderCriterionSection(d, c, assignment, diseaseCtx) {
+        var met = assignment.met.indexOf(c.id) !== -1;
+        var direct = assignment.met_direct.indexOf(c.id) !== -1;
+        var fired = new Set(assignment.signals);
+
+        var verdict = met ? (direct ? "Met" : "Met on proxy evidence") : "Not met";
+        var verdictTip = met
+            ? (direct
+                ? "At least one signal the registry records directly holds for this disease."
+                : "Only inferred signals hold here. Nothing in the registry records this criterion for this disease.")
+            : "No signal for this criterion holds for this disease.";
+
+        var cls = "criterion" + (met ? (direct ? " met" : " met-proxy") : " unmet");
+        var html = '<section class="' + cls + '" style="--c:' + c.colour + '">';
+        html += '<div class="criterion-body">';
+
+        html += '<div class="criterion-head">';
+        html += '<img class="criterion-glyph" src="assets/criteria/' + esc(c.icon) + '" alt="" width="34" height="34">';
+        html += '<div class="criterion-title">';
+        html += '<h4><span class="criterion-num">' + c.number + '</span>' + esc(c.label) + '</h4>';
+        html += '<p class="criterion-tagline">' + esc(c.tagline) + '</p>';
+        html += '</div>';
+        html += withTip('<span class="criterion-verdict">' + esc(verdict) + '</span>', verdictTip);
+        html += '</div>';
+
+        var signals = (c.signals || []).filter(function (s) { return fired.has(s.id); });
+        if (signals.length > 0) {
+            html += '<div class="criterion-signals">';
+            signals.forEach(function (s) {
+                html += withTip('<span class="signal-chip ' + s.tier + '">' + esc(s.label) + '</span>',
+                    s.description + " (" + s.tier + " evidence)");
+            });
+            html += '</div>';
+        }
+
+        var rendered = (c.display || []).map(function (item) {
+            return { item: item, html: renderDisplayField(d, item, diseaseCtx) };
+        }).filter(function (r) { return r.html; });
+
+        // Carried over from the old functional-capacity section: these assessments are
+        // agent-curated and clinically unreviewed, and must never appear without saying so.
+        var hasFunctional = rendered.some(function (r) { return r.item.render === "functional"; });
+        var fields = (hasFunctional ? FC_DISCLAIMER : "") +
+            rendered.map(function (r) { return r.html; }).join("");
+
+        if (fields) {
+            html += '<div class="criterion-fields">' + fields + '</div>';
+        } else {
+            html += '<p class="criterion-empty">Nothing recorded for this criterion.</p>';
+        }
+
+        html += '</div></section>';
+        return html;
+    }
+
+    // Everything the six criteria do not claim. Kept visible rather than dropped:
+    // a field that belongs to no criterion is a gap in the framework, not noise.
+    // Which justification_summary values the six criteria between them display.
+    // Computed from the config, so adding a new curated label anywhere shows up
+    // under "Everything else on record" instead of silently vanishing.
+    function claimedJustifications() {
+        var claimed = new Set();
+        criteriaSpec.forEach(function (c) {
+            (c.display || []).forEach(function (item) {
+                if (item.field === "justification_summary" && item.values) {
+                    item.values.forEach(function (v) { claimed.add(v); });
+                }
+            });
+        });
+        return claimed;
+    }
+
+    function renderReferenceBlock(d) {
+        var rows = [];
+        var claimed = claimedJustifications();
+        var orphanJustifications = (d.justification_summary || []).filter(function (v) {
+            return !claimed.has(v);
+        });
+        if (orphanJustifications.length > 0) {
+            rows.push('<div class="criterion-field"><div class="field-label">' +
+                'Justification not claimed by any criterion</div><div class="field-value">' +
+                '<div class="category-list">' + orphanJustifications.map(function (v) {
+                    return '<span class="curated-label">' + esc(v) + '</span>';
+                }).join("") + '</div></div></div>');
+        }
+        var hlFields = [
+            ["Process", d.mondo_category_developmental],
+            ["Cause", d.mondo_category_etiologic],
+            ["External factor", d.mondo_category_extrinsic],
+        ].filter(function (p) { return p[1] && p[1].length > 0; });
+        hlFields.forEach(function (p) {
+            rows.push('<div class="criterion-field"><div class="field-label">' + p[0] +
+                '</div><div class="field-value"><div class="category-list">' +
+                p[1].map(function (t) { return renderTermPill(t, "mondo"); }).join("") +
+                '</div></div></div>');
+        });
+        if (d.additional_justification) {
+            rows.push('<div class="criterion-field"><div class="field-label">Curator note</div>' +
+                '<div class="field-value"><p class="field-text">' +
+                highlightText(d.additional_justification, searchQuery) + '</p></div></div>');
+        }
+        if (d.ontology_terminology_codes && d.ontology_terminology_codes.length > 0) {
+            rows.push('<div class="criterion-field"><div class="field-label">All cross-references</div>' +
+                '<div class="field-value"><div class="code-list">' +
+                d.ontology_terminology_codes.map(renderCurieLink).join(" ") + '</div></div></div>');
+        }
+        if (rows.length === 0) return "";
+        var id = "ref-" + Math.random().toString(36).slice(2, 8);
+        return '<section class="reference-block">' +
+            '<button class="section-toggle" onclick="toggleSection(\'' + id + '\', this)">' +
+            '<span class="arrow">&#9654;</span> Everything else on record</button>' +
+            '<div class="section-content" id="' + id + '"><div class="criterion-fields">' +
+            rows.join("") + '</div></div></section>';
+    }
+
+    function renderCard(d) {
         var hl = searchQuery ? function (t) { return highlightText(t, searchQuery); } : esc;
         var matched = findMatchedFields(d, searchQuery);
+        var assignment = criterionAssignment(d);
+        var diseaseCtx = { disease_id: d.mondo_id, disease_label: d.mondo_label };
 
-        var html = '<div class="disease-card">';
+        var html = '<article class="disease-card">';
 
-        // Match indicator
         if (matched.length > 0) {
-            var firstMatch = matched[0];
-            html += '<div class="match-indicator">Matched on <strong>' + esc(firstMatch.field) + '</strong>: ' +
-                highlightText(truncate(firstMatch.value, 80), searchQuery) + '</div>';
+            html += '<div class="match-indicator">Matched on <strong>' + esc(matched[0].field) + '</strong>: ' +
+                highlightText(truncate(matched[0].value, 80), searchQuery) + '</div>';
         }
 
-        // Header
-        html += '<div class="card-header"><div>';
+        html += '<header class="disease-head">';
+        html += '<div class="disease-ident">';
         html += '<h3>' + hl(d.mondo_label) + '</h3>';
-        html += '<span class="mondo-id">' + renderCurieLink(d.mondo_id) + '</span>';
-        html += '</div></div>';
-
-        // Badges
-        html += '<div class="card-badges">';
-        if (prioClass) {
-            var prioLabel = PRIORITIZATION_LABELS[prioClass] || prioClass;
-            var prioTip = PRIORITIZATION_TOOLTIPS[prioClass] || "";
-            html += renderTooltipTag(prioLabel, prioTip, "tag " + prioClass);
+        html += '<div class="disease-meta">' + renderCurieLink(d.mondo_id);
+        if (d.prioritization_category) {
+            html += renderTooltipTag(PRIORITIZATION_LABELS[d.prioritization_category] || d.prioritization_category,
+                PRIORITIZATION_TOOLTIPS[d.prioritization_category] || "", "tag " + d.prioritization_category);
         }
-        if (SHOW_PREVALENCE && prevCat) {
-            var prevTip = PREVALENCE_TOOLTIPS[prevCat] || "";
-            html += renderTooltipTag(prevLabel, prevTip, "tag " + prevClass);
-        }
-        if (hasIndications) html += '<span class="tag has-indications">Approved Indications</span>';
-        if (hasContraindications) html += '<span class="tag has-contraindications">Contraindications</span>';
-        if (d.work_capacity) html += renderFcBadge("Work", d.work_capacity);
-        if (d.care_dependence) html += renderFcBadge("Care", d.care_dependence);
         (d.keywords || []).forEach(function (k) {
             html += '<span class="tag keyword">' + esc(k) + '</span>';
         });
         html += '</div>';
-
-        // Body
-        html += '<div class="card-body">';
-
         if (d.mondo_synonyms && d.mondo_synonyms.length > 0) {
             var syns = d.mondo_synonyms.slice(0, 6);
-            html += '<div class="synonyms">Also known as: ' + syns.map(hl).join(", ");
-            if (d.mondo_synonyms.length > 6) html += ", ...";
-            html += '</div>';
+            html += '<p class="disease-synonyms">Also known as ' + syns.map(hl).join(", ") +
+                (d.mondo_synonyms.length > 6 ? ", and " + (d.mondo_synonyms.length - 6) + " more" : "") + '</p>';
         }
+        html += '</div>';
+        html += renderCriteriaMeter(d);
+        html += '</header>';
 
-        // Categories — each type in its own labelled section
-        var mondoCats = d.mondo_category_body_system || [];
-        var hpoCats = d.hpo_high_level_categories || [];
-        var histoCats = d.histopheno_categories || [];
+        html += '<div class="criteria-stack">';
+        criteriaSpec.forEach(function (c) {
+            html += renderCriterionSection(d, c, assignment, diseaseCtx);
+        });
+        html += '</div>';
 
-        // MONDO high-level sub-categories (nested under Mondo)
-        var mondoHLFields = [
-            ["Organ/System", d.mondo_category_body_system],
-            ["Process", d.mondo_category_developmental],
-            ["Cause", d.mondo_category_etiologic],
-            ["Genetic Basis", d.mondo_category_genetic],
-            ["External Factor", d.mondo_category_extrinsic],
-            ["Mechanism", d.mondo_category_molecular],
-        ].filter(function (pair) { return pair[1] && pair[1].length > 0; });
-
-        var hasMondo = mondoCats.length > 0 || mondoHLFields.length > 0;
-        if (hasMondo || hpoCats.length > 0 || histoCats.length > 0) {
-            html += '<div class="categories-block">';
-            if (hasMondo) {
-                html += '<div class="category-section"><span class="category-label tooltip-wrap">Disease Type' +
-                    '<span class="tooltip-text">Disease classifications from the Mondo Disease Ontology, a unified resource for disease definitions</span></span><div>';
-                if (mondoCats.length > 0) {
-                    html += '<div class="category-list">';
-                    mondoCats.forEach(function (t) { html += renderTermPill(t, "mondo"); });
-                    html += '</div>';
-                }
-                if (mondoHLFields.length > 0) {
-                    html += '<div class="mondo-hl-nested">';
-                    mondoHLFields.forEach(function (pair) {
-                        html += '<div class="mondo-hl-row"><span class="mondo-hl-label">' + pair[0] + ':</span> ';
-                        html += pair[1].map(function (t) { return renderTermPill(t, "mondo"); }).join(" ");
-                        html += '</div>';
-                    });
-                    html += '</div>';
-                }
-                html += '</div></div>';
-            }
-            if (hpoCats.length > 0) {
-                html += '<div class="category-section"><span class="category-label tooltip-wrap">Phenotype Area' +
-                    '<span class="tooltip-text">Broad clinical areas affected, from the Human Phenotype Ontology (HPO)</span></span>';
-                html += '<div class="category-list">';
-                hpoCats.forEach(function (t) { html += renderTermPill(t, "hpo"); });
-                html += '</div></div>';
-            }
-            if (histoCats.length > 0) {
-                html += '<div class="category-section"><span class="category-label tooltip-wrap">Tissue/System' +
-                    '<span class="tooltip-text">Affected body tissues or organ systems</span></span>';
-                html += '<div class="category-list">';
-                histoCats.forEach(function (c) {
-                    html += '<span class="category-pill histopheno">' + esc(c) + '</span>';
-                });
-                html += '</div></div>';
-            }
-            html += '</div>';
-        }
-
-        // Detail grid
-        html += '<div class="detail-grid">';
-        if (SHOW_PREVALENCE && d.prevalence_per_100k_us != null) {
-            html += '<div class="detail-row"><strong>US Prevalence:</strong> ' +
-                d.prevalence_per_100k_us + ' per 100k</div>';
-        }
-        if (d.hpo_treatment_rank != null) {
-            html += '<div class="detail-row"><strong>HPO/Treatment Rank:</strong> ' +
-                Number(d.hpo_treatment_rank).toFixed(3) + '</div>';
-        }
-        if (d.misdiagnosis_bias) {
-            html += '<div class="detail-row full-width"><strong>Diagnosis Bias:</strong> ' +
-                hl(d.misdiagnosis_bias) + '</div>';
-        }
-        if (d.justification_summary && d.justification_summary.length > 0) {
-            var j = Array.isArray(d.justification_summary) ?
-                d.justification_summary.join(", ") : d.justification_summary;
-            html += '<div class="detail-row full-width"><strong>Justification:</strong> ' +
-                hl(j) + '</div>';
-        }
-        if (d.additional_justification) {
-            html += '<div class="detail-row full-width"><strong>Additional Detail:</strong> ' +
-                highlightText(truncate(d.additional_justification, 200), searchQuery) + '</div>';
-        }
-        html += '</div>'; // detail-grid
-
-        // Functional capacity — sits with the other per-disease judgements, directly
-        // under the ranking and justification block, and above the reference material.
-        html += renderFunctionalCapacity(d);
-
-        // Cross-references
-        if (d.ontology_terminology_codes && d.ontology_terminology_codes.length > 0) {
-            html += '<div class="xrefs-section"><strong>Cross-references:</strong> ';
-            html += d.ontology_terminology_codes.map(renderCurieLink).join(", ");
-            html += '</div>';
-        }
-
-        // HPO profiles (SimpleTerm pills, like categories)
-        // Collapsed by default: a well-annotated disease carries over a hundred
-        // pills here, which pushed everything below it off the screen. The count
-        // stays visible so the profile's size is still legible while closed.
-        var hpoProfiles = d.curated_hpo_profiles || [];
-        if (hpoProfiles.length > 0) {
-            var hpoId = "hpo-" + Math.random().toString(36).slice(2, 8);
-            html += '<div class="card-subsection">';
-            html += '<button class="subsection-toggle tooltip-wrap" onclick="toggleSection(\'' + hpoId + '\', this)">';
-            html += '<span class="arrow">&#9654;</span> Phenotype Profile ' +
-                '<span class="subsection-count">' + hpoProfiles.length + '</span>';
-            html += '<span class="tooltip-text">Key clinical signs and symptoms (phenotypes) associated with this disease, drawn from the Human Phenotype Ontology (HPO)</span>';
-            html += '</button>';
-            html += '<div class="section-content" id="' + hpoId + '">';
-            html += '<div class="category-list">';
-            hpoProfiles.forEach(function (t) { html += renderTermPill(t, "hpo"); });
-            html += '</div></div></div>';
-        }
-
-        html += '</div>'; // card-body
-
-        // Disease context for feedback
-        var diseaseCtx = { disease_id: d.mondo_id, disease_label: d.mondo_label };
-
-        // Approved indications section
-        if (hasIndications) {
-            html += renderCollapsibleSection("indications", d.indications,
-                "Approved Indications (" + d.indications.length + ")",
-                renderIndicationEntry, diseaseCtx);
-        }
-
-        // Contraindications section
-        if (hasContraindications) {
-            html += renderCollapsibleSection("contraindications", d.contraindications,
-                "Contraindications (" + d.contraindications.length + ")",
-                renderContraindicationEntry, diseaseCtx);
-        }
-
-        // Research section
-        if (hasResearch) {
-            html += renderCollapsibleSection("research", d.research,
-                "Treatment Research (" + d.research.length + " entries)",
-                renderResearchEntry, diseaseCtx);
-        }
-
-        html += '</div>'; // disease-card
+        html += renderReferenceBlock(d);
+        html += '</article>';
         return html;
     }
 
@@ -560,6 +769,7 @@
         STATE_POLICY_LIST: "A state Medicaid medically-frail condition list, keyed to ICD-10-CM codes.",
         LITERATURE: "A peer-reviewed publication reporting employment, ADL, caregiver-burden or functional outcomes. Every quote is machine-checked against the cached source.",
         MODEL_JUDGEMENT: "A language model's structured judgement from the disease description. Never sufficient alone.",
+        PHENOTYPE_ANCHOR: "Specific HPO findings that are curated as occurring in at least 30% of affected people \u2014 the same bar the levels use. Suggestive, but only 59\u201365% accurate against expert ratings, so it can never set a level on its own. It is also the same data the score is computed from, so it never counts as a second independent source.",
         COMPUTED_SCORE: "The phenotype-based score. A ranking signal, not a finding."
     };
     var FC_STRENGTH_TIPS = {
@@ -586,17 +796,6 @@
 
     function fcClass(level) {
         return "fc-" + String(level || "unknown").toLowerCase();
-    }
-
-    // Compact badge for the card header, e.g. "Work: TOTAL".
-    function renderFcBadge(short, a) {
-        var lvl = a.impairment || "UNKNOWN";
-        var tip = short + " — " + (IMPAIRMENT_TIPS[lvl] || "");
-        if (a.care_context && a.care_context !== "UNKNOWN") {
-            tip += " Context: " + a.care_context.replace(/_/g, " ").toLowerCase() + ".";
-        }
-        var label = short + ": " + lvl.replace(/_/g, " ");
-        return withTip('<span class="tag fc-tag ' + fcClass(lvl) + '">' + esc(label) + '</span>', tip);
     }
 
     function renderFcEvidence(e) {
@@ -708,32 +907,12 @@
         return html;
     }
 
-    function renderFunctionalCapacity(d) {
-        var present = FC_AXES.filter(function (ax) { return d[ax[0]]; });
-        if (present.length === 0) return "";
-
-        var parts = present.map(function (ax) { return ax[1] + " " + (d[ax[0]].impairment || "UNKNOWN"); });
-        var id = "fc-" + Math.random().toString(36).slice(2, 8);
-
-        var html = '<div class="card-section">';
-        html += '<button class="section-toggle" onclick="toggleSection(\'' + id + '\', this)">';
-        html += '<span class="arrow">&#9654;</span> Functional Capacity — ' + esc(parts.join(" · "));
-        html += '</button>';
-        html += '<div class="section-content" id="' + id + '">';
-        // Shown only on unfold, and deliberately styled as a caution rather than grey
-        // boilerplate: these assessments are agent-curated, awaiting human review, and
-        // nobody has validated them clinically.
-        html += '<p class="fc-disclaimer"><strong>Experimental — not clinically validated.</strong> ' +
-            'These are disease-level expectations assembled from published sources and have not been ' +
-            'reviewed or validated by a clinician. They describe what is typical for a disease, are ' +
-            'not an assessment of any person, and must not be used to make decisions about anyone\'s ' +
-            'care, benefits, or entitlements.</p>';
-        present.forEach(function (ax) {
-            html += renderFcAssessment(ax[0], ax[1], ax[2], d[ax[0]]);
-        });
-        html += '</div></div>';
-        return html;
-    }
+    var FC_DISCLAIMER =
+        '<p class="fc-disclaimer"><strong>Experimental, not clinically validated.</strong> ' +
+        'These are disease-level expectations assembled from published sources and have not been ' +
+        'reviewed or validated by a clinician. They describe what is typical for a disease, are ' +
+        'not an assessment of any person, and must not be used to make decisions about anyone\'s ' +
+        'care, benefits, or entitlements.</p>';
 
     // -- SimpleTerm rendering --
 

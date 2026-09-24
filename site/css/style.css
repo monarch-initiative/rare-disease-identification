@@ -1,45 +1,61 @@
+/* Palette and type are taken from the manuscript's prioritisation-workflow
+   figure: the six criterion colours are the figure's own donut wedges, the page
+   ground is its paper tint, and Oswald is the face the figure is set in. The
+   criterion colours appear only on data -- spines, glyphs, meters -- never on
+   page chrome, so a splash of colour on a card always means "this criterion". */
 :root {
-    --primary: #2563eb;
-    --primary-dark: #1d4ed8;
-    --primary-light: #dbeafe;
-    --bg: #f8fafc;
+    --c1: #4593b6;  /* 1 gold-standard data   */
+    --c2: #1c3b53;  /* 2 patient outcomes     */
+    --c3: #a6b875;  /* 3 low diagnostic rate  */
+    --c4: #b13b29;  /* 4 progressive          */
+    --c5: #e6ca5d;  /* 5 accessible test      */
+    --c6: #e17438;  /* 6 phenotypic complexity*/
+
+    --primary: #1c3b53;
+    --primary-dark: #14293a;
+    --primary-light: #dce8ef;
+    --bg: #f3f1ea;
     --card-bg: #ffffff;
-    --border: #e2e8f0;
-    --border-strong: #cbd5e1;
-    --text: #1e293b;
-    --text-muted: #64748b;
-    --text-light: #94a3b8;
-    --tag-bg: #e0e7ff;
-    --tag-text: #3730a3;
-    --initial-bg: #dcfce7;
-    --initial-text: #166534;
-    --expanded-bg: #fef3c7;
-    --expanded-text: #92400e;
-    --green: #16a34a;
-    --green-bg: #f0fdf4;
-    --amber: #d97706;
-    --amber-bg: #fffbeb;
-    --red: #dc2626;
-    --red-bg: #fef2f2;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-    --radius: 8px;
+    --border: #e3dfd4;
+    --border-strong: #cdc7b8;
+    --text: #1f2a33;
+    --text-muted: #5f6b73;
+    --text-light: #8b9299;
+    --tag-bg: #eae6da;
+    --tag-text: #4a5259;
+    --initial-bg: #dbe8ef;
+    --initial-text: #15455f;
+    --expanded-bg: #f2ecd9;
+    --expanded-text: #6d5a1d;
+    --green: #4f7a33;
+    --green-bg: #f2f6ea;
+    --amber: #a9721c;
+    --amber-bg: #fbf5e7;
+    --red: #a33526;
+    --red-bg: #fbeeec;
+    --shadow-sm: 0 1px 2px rgba(31,42,51,0.05);
+    --shadow-md: 0 6px 18px rgba(31,42,51,0.09);
+    --radius: 6px;
+    --display: "Oswald", "Arial Narrow", system-ui, sans-serif;
+    --body: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--body);
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
 }
 
-/* Header */
-header {
-    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-    color: white;
-    padding: 1.5rem 2rem 1rem;
+/* Page banner. Scoped to the direct child of body: each disease card also uses a
+   <header>, and an unscoped rule painted every card head navy-on-navy. */
+body > header {
+    background: var(--c2);
+    color: #f3f1ea;
+    padding: 1.6rem 2rem 1.1rem;
+    border-bottom: 4px solid var(--c6);
 }
 
 .header-inner {
@@ -50,9 +66,16 @@ header {
     align-items: flex-start;
 }
 
-header h1 { font-size: 1.6rem; margin-bottom: 0.15rem; font-weight: 700; }
+body > header h1 {
+    font-family: var(--display);
+    font-size: 1.95rem;
+    font-weight: 500;
+    letter-spacing: 0.005em;
+    line-height: 1.12;
+    margin-bottom: 0.15rem;
+}
 .subtitle {
-    opacity: 0.8;
+    opacity: 0.78;
     font-size: 0.88rem;
     max-width: 900px;
     line-height: 1.5;
@@ -66,13 +89,14 @@ header h1 { font-size: 1.6rem; margin-bottom: 0.15rem; font-weight: 700; }
 .github-link:hover { color: white; }
 
 .header-stats {
-    max-width: 1200px;
-    margin: 0.75rem auto 0;
     display: flex;
+    flex-wrap: wrap;
     gap: 1.5rem;
     font-size: 0.85rem;
-    opacity: 0.85;
+    color: var(--text-muted);
+    margin-bottom: 0.9rem;
 }
+.header-stats strong { color: var(--text); }
 
 .header-stat { display: flex; align-items: center; gap: 0.35rem; }
 .header-stat strong { font-weight: 600; }
@@ -81,11 +105,19 @@ header h1 { font-size: 1.6rem; margin-bottom: 0.15rem; font-weight: 700; }
 main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
 
 /* Search */
+/* Its own navy band: the search box is a control, and on the grey information
+   panel it read as one more paragraph of it. */
+.search-band {
+    background: var(--c2);
+    padding: 0.9rem 2rem 1rem;
+}
+
 .search-bar {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 .search-wrapper {
@@ -106,7 +138,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
     width: 100%;
     padding: 0.75rem 1rem 0.75rem 2.5rem;
     font-size: 1rem;
-    border: 2px solid var(--border);
+    border: 2px solid rgba(243,241,234,0.25);
     border-radius: var(--radius);
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
@@ -114,8 +146,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
 }
 
 #search-input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    border-color: #e6ca5d;
+    box-shadow: 0 0 0 3px rgba(230,202,93,0.25);
 }
 
 .result-count { color: var(--text-muted); white-space: nowrap; font-size: 0.9rem; }
@@ -137,7 +169,12 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
     padding-right: 0.5rem;
 }
 
-.filters h2 { font-size: 1.05rem; margin-bottom: 1rem; font-weight: 600; }
+.filters h2 {
+    font-family: var(--display);
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
 
 .filter-group {
     margin-bottom: 1rem;
@@ -1301,6 +1338,7 @@ footer a:hover { text-decoration: underline; }
 .fc-lane.federal_policy_list { background: #dcfce7; color: #166534; }
 .fc-lane.state_policy_list { background: #ecfccb; color: #3f6212; }
 .fc-lane.model_judgement { background: #fae8ff; color: #86198f; }
+.fc-lane.phenotype_anchor { background: #fef3c7; color: #92400e; }
 .fc-lane.computed_score { background: #f1f5f9; color: #64748b; }
 
 .fc-dir {
@@ -1399,4 +1437,414 @@ footer a:hover { text-decoration: underline; }
     padding: 0.02rem 0.32rem;
     border-radius: 3px;
     font-variant-numeric: tabular-nums;
+}
+
+/* ================================================================
+   Criteria layout
+   The six prioritisation criteria are the card's primary structure.
+   Each section owns a colour (--c, set inline from criteria.json) and
+   wears it on a left spine, its glyph, and its number. Met sections are
+   at full strength; unmet ones recede but keep their content, because an
+   absent criterion is a finding, not a reason to hide the data.
+   ================================================================ */
+
+/* No `overflow: hidden` here, however much the rounded corners want it: the
+   criterion sections are full of hover tooltips that open upward and outward,
+   and clipping the card clipped every one of them. The corners are rounded on
+   the first and last child instead. */
+.disease-card { padding: 0; }
+
+.disease-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.1rem 1.25rem 1rem;
+    /* Shaded so the disease it names reads as the card's subject rather than as
+       another section of it. Deliberately neutral: colour on a card means
+       "criterion", and the head belongs to no criterion. */
+    background: #edeae1;
+    border-bottom: 2px solid var(--border-strong);
+    border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+}
+
+.disease-card > *:last-child {
+    border-bottom-left-radius: calc(var(--radius) - 1px);
+    border-bottom-right-radius: calc(var(--radius) - 1px);
+}
+
+.disease-ident { min-width: 0; }
+
+.disease-head h3 {
+    font-family: var(--display);
+    font-size: 1.55rem;
+    font-weight: 500;
+    line-height: 1.15;
+    color: var(--text);
+}
+
+.disease-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.35rem;
+}
+
+.disease-synonyms {
+    margin-top: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    max-width: 62ch;
+}
+
+/* Six chips echoing the donut: lit when the criterion is met. */
+.criteria-meter {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.3rem;
+    flex-shrink: 0;
+}
+
+.meter-chips { display: flex; gap: 0.25rem; }
+/* withTip() wraps each chip in .badge-tip, so the wrapper has to carry the box. */
+.meter-chips .badge-tip { display: inline-flex; }
+
+.meter-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #f7f5f0;
+    border: 1px solid var(--border-strong);
+}
+
+.meter-chip img { opacity: 0.18; filter: grayscale(1); }
+.meter-chip.on { background: #fff; border-color: var(--c); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 18%, #fff); }
+.meter-chip.on img { opacity: 1; filter: none; }
+
+.meter-count { font-size: 0.75rem; color: var(--text-muted); }
+.meter-count strong { color: var(--text); font-size: 0.9rem; }
+
+.criteria-stack { display: block; }
+
+.criterion {
+    display: block;
+    border-top: 1px solid var(--border);
+    border-left: 5px solid var(--c);
+    padding: 0.85rem 1.25rem 0.95rem;
+}
+
+.criteria-stack > .criterion:first-child { border-top: none; }
+.criterion.unmet { border-left-color: color-mix(in srgb, var(--c) 22%, #fff); background: #fbfaf7; }
+.criterion.met-proxy { border-left-style: dashed; }
+
+.criterion-head {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.criterion-glyph { flex-shrink: 0; }
+.criterion.unmet .criterion-glyph { opacity: 0.3; filter: grayscale(0.7); }
+
+.criterion-title { flex: 1; min-width: 0; }
+
+.criterion-head h4 {
+    font-family: var(--display);
+    font-size: 1.05rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--text);
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.criterion-num {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--c);
+    line-height: 1;
+}
+
+.criterion.unmet .criterion-num { color: var(--text-light); }
+
+.criterion-tagline {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+}
+
+.criterion-verdict {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.14rem 0.5rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--c) 14%, #fff);
+    color: color-mix(in srgb, var(--c) 78%, #000);
+    border: 1px solid color-mix(in srgb, var(--c) 35%, #fff);
+    white-space: nowrap;
+}
+
+.criterion.unmet .criterion-verdict {
+    background: #f2f0ea;
+    color: var(--text-light);
+    border-color: var(--border);
+}
+
+.criterion-signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin: 0.5rem 0 0 2.6rem;
+}
+
+.signal-chip {
+    font-size: 0.68rem;
+    padding: 0.08rem 0.42rem;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--c) 10%, #fff);
+    color: color-mix(in srgb, var(--c) 72%, #000);
+    border: 1px solid color-mix(in srgb, var(--c) 26%, #fff);
+    cursor: help;
+}
+
+/* Inferred evidence is marked in the interface, not only in the docs. */
+.signal-chip.proxy {
+    background: transparent;
+    border-style: dashed;
+    color: var(--text-muted);
+}
+.signal-chip.proxy::after { content: " · inferred"; opacity: 0.65; }
+
+.criterion-fields { margin: 0.6rem 0 0 2.6rem; }
+
+.criterion-field { margin-bottom: 0.5rem; }
+.criterion-field:last-child { margin-bottom: 0; }
+
+.field-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.18rem;
+}
+
+.field-text { font-size: 0.85rem; line-height: 1.5; max-width: 72ch; }
+.field-number { font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+
+.code-list { display: flex; flex-wrap: wrap; gap: 0.3rem 0.5rem; }
+
+.value-set-tier {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.tier-name {
+    font-size: 0.66rem;
+    text-transform: lowercase;
+    color: var(--text-light);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0 0.3rem;
+    flex-shrink: 0;
+}
+
+.value-set-code { display: inline-flex; align-items: baseline; gap: 0.3rem; }
+.code-label { font-size: 0.75rem; color: var(--text-muted); }
+
+.curated-label {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--c) 8%, #fff);
+    border: 1px solid color-mix(in srgb, var(--c) 24%, #fff);
+    color: var(--text);
+}
+
+.criterion-empty {
+    margin: 0.5rem 0 0 2.6rem;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    font-style: italic;
+}
+
+.criterion-block { margin-bottom: 0.5rem; }
+
+.field-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.field-toggle:hover { color: var(--primary); }
+.field-toggle .arrow { font-size: 0.6rem; transition: transform 0.15s; }
+.field-toggle.open .arrow { transform: rotate(90deg); }
+
+.reference-block {
+    border-top: 1px solid var(--border);
+    background: #faf9f5;
+    padding: 0.7rem 1.25rem;
+}
+.reference-block .criterion-fields { margin-left: 0; margin-top: 0.5rem; }
+
+/* Sidebar criterion filter */
+.criterion-filter { position: relative; padding-left: 0.6rem !important; }
+.criterion-filter::before {
+    content: "";
+    position: absolute;
+    left: -0.15rem;
+    top: 0.2rem;
+    bottom: 0.2rem;
+    width: 3px;
+    background: var(--c);
+    border-radius: 2px;
+}
+.criterion-filter img { flex-shrink: 0; }
+.criterion-filter .filter-label { flex: 1; min-width: 0; }
+.criterion-filter .count { font-variant-numeric: tabular-nums; }
+
+.filter-hint {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    margin-top: 0.35rem;
+    line-height: 1.35;
+}
+
+.header-stat.warn { color: #ffd9a0; }
+
+/* The two-column grid never collapsed, so the whole page scrolled sideways on a
+   phone. Filters move above the results and the card sections lose their indent. */
+@media (max-width: 860px) {
+    body > header { padding: 1.1rem 1rem 0.9rem; }
+    main { padding: 1rem; }
+    .content-layout { grid-template-columns: 1fr; }
+    .filters {
+        position: static;
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+    .search-bar { flex-wrap: wrap; }
+    .disease-head { flex-direction: column; gap: 0.7rem; }
+    .criteria-meter { align-items: flex-start; }
+    .criterion { padding-left: 0.85rem; padding-right: 0.85rem; }
+    .criterion-signals, .criterion-fields, .criterion-empty { margin-left: 0; }
+    .disease-head, .reference-block { padding-left: 0.9rem; padding-right: 0.9rem; }
+    /* A tooltip anchored near the right edge would otherwise push the page wide. */
+    .tooltip-text, .badge-tip > .tooltip-text { max-width: 220px; }
+}
+
+
+/* ================================================================
+   Page intro
+   The navy banner carries only what the list is called and, in a line,
+   what it is. Everything a reader needs before trusting the data --
+   how it was assembled, and which parts nobody has checked -- sits in
+   a grey band below it, on light ground where it is readable at length.
+   ================================================================ */
+
+.header-lead { max-width: 76ch; }
+
+.page-intro {
+    background: #e8e5db;
+    border-bottom: 1px solid var(--border-strong);
+    padding: 1.3rem 2rem 1.6rem;
+}
+
+.page-intro-inner { max-width: 1200px; margin: 0 auto; }
+
+.header-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 1.75rem;
+    align-items: start;
+}
+
+.header-detail h2 {
+    font-family: var(--display);
+    font-size: 1.05rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+}
+
+.header-method {
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+}
+.header-method p + p { margin-top: 0.55rem; }
+.header-method strong { font-weight: 600; color: var(--text); }
+.header-method a, .header-caution a { color: var(--primary); }
+
+/* Numbered because the criteria genuinely are numbered 1-6 in the manuscript
+   figure, and the number is how a reader ties this list to the coloured sections
+   on every card below. */
+.criteria-brief {
+    margin: 0.7rem 0 0.8rem;
+    padding-left: 1.5rem;
+    display: grid;
+    gap: 0.5rem;
+}
+/* The row is a grid, the <li> is not: making the list item itself a grid drops its
+   display:list-item and takes the 1-6 numbering with it, which is the one thing
+   tying this list to the six sections on every card. */
+.criteria-brief li { padding-left: 0.3rem; }
+.criteria-brief li::marker { color: var(--c); font-weight: 700; }
+.brief-row { display: grid; grid-template-columns: 22px 1fr; gap: 0.55rem; align-items: start; }
+.criteria-brief img { margin-top: 0.2rem; }
+.brief-name { font-weight: 700; color: var(--text); }
+.brief-tag { color: var(--text); font-style: italic; }
+.brief-name::after { content: " \2014\00a0"; font-style: normal; font-weight: 400; color: var(--text-muted); }
+.criteria-brief p { margin-top: 0.1rem; }
+
+/* Long enough now that the caution would scroll away while the six are read. */
+@media (min-width: 961px) {
+    .header-caution { position: sticky; top: 1rem; }
+}
+
+.method-more { font-size: 0.8rem; }
+
+/* The only amber on the page, and the one thing a reader must not skim past.
+   Criterion colours live on cards; this is not one of them. */
+.header-caution {
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--text);
+    background: #fffaf0;
+    border: 1px solid #e3c68a;
+    border-left: 4px solid #d98f28;
+    border-radius: var(--radius);
+    padding: 0.9rem 1.1rem 1rem;
+}
+
+.header-caution h2 { color: #8a5714; }
+.header-caution strong { font-weight: 700; }
+.header-caution ul { margin: 0.55rem 0 0.6rem; padding-left: 1.1rem; display: grid; gap: 0.42rem; }
+.header-caution > p:last-child { color: var(--text-muted); }
+
+.search-band .result-count {
+    color: rgba(243,241,234,0.82);
+    white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+    .header-detail { grid-template-columns: 1fr; gap: 1.1rem; }
+    .page-intro { padding: 1.1rem 1rem 1.3rem; }
+    .search-band { padding: 0.8rem 1rem; }
 }

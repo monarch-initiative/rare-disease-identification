@@ -28,6 +28,7 @@ jobs:
           rm -f site/data
           mkdir -p site/data
           cp prioritised-rare-disease-list.yml site/data/
+          cp criteria.json site/data/
 
       - uses: actions/configure-pages@v5
 
