@@ -11,10 +11,15 @@ prefixes:
   rdid: https://w3id.org/rare-disease-identification/
   MONDO: http://purl.obolibrary.org/obo/MONDO_
   HP: http://purl.obolibrary.org/obo/HP_
+  ICD10CM: http://purl.bioontology.org/ontology/ICD10CM/
+  SNOMEDCT: http://snomed.info/id/
+  infores: https://w3id.org/information-resource-registry/
+  skos: http://www.w3.org/2004/02/skos/core#
 
 imports:
   - linkml:types
   - functional_capacity
+  - value_set
 
 default_range: string
 
@@ -468,6 +473,15 @@ classes:
           (e.g. OMIM, MEDGEN, UMLS).
         range: string
         multivalued: true
+      value_sets:
+        description: >-
+          Codes to query a patient record system with for this disease, one
+          value set per terminology, each in three tiers. `exact` and `narrower`
+          are regenerated from Mondo and are not hand-editable; `proxy` is
+          curated. See schema/value_set.yaml.
+        range: TerminologyValueSet
+        multivalued: true
+        inlined_as_list: true
       prevalence_category:
         description: >-
           Prevalence category: L (low), H (high), H* (high in some populations).

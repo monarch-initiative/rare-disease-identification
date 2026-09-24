@@ -1,0 +1,280 @@
+id: https://w3id.org/rare-disease-identification/value-set
+name: value_set
+title: Terminology Value Set Schema
+description: >-
+  The set of codes you would query a patient record system with to find people
+  who have a given rare disease, split into three tiers by what the query
+  actually returns.
+
+  One value set per terminology. ICD-10-CM is the first target because that is
+  what US claims data speaks, but nothing here is specific to it: SNOMED CT,
+  ICD-11, ICD-9-CM and read codes all have the same shape — a code hierarchy,
+  an anchor concept, and a set of leaves a query expands to.
+
+  Two tiers are derived from Mondo and must never be hand-edited; one is curated
+  here because Mondo cannot carry it. The split is the safety mechanism: a
+  consumer that wants a cohort unions `exact` and `narrower` and stops, and has
+  to name `proxy` explicitly to get the lossy codes.
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  rdid: https://w3id.org/rare-disease-identification/
+  MONDO: http://purl.obolibrary.org/obo/MONDO_
+  ICD10CM: http://purl.bioontology.org/ontology/ICD10CM/
+  SNOMEDCT: http://snomed.info/id/
+  skos: http://www.w3.org/2004/02/skos/core#
+  dcterms: http://purl.org/dc/terms/
+  infores: https://w3id.org/information-resource-registry/
+  ORCID: https://orcid.org/
+  RDIDAGENT: https://w3id.org/rare-disease-identification/agent/
+
+default_prefix: rdid
+default_range: string
+imports:
+  - linkml:types
+
+enums:
+
+  TerminologyEnum:
+    description: >-
+      The code system a value set is expressed in. Extend as new targets are
+      added; the tier semantics below are the same for all of them.
+    permissible_values:
+      ICD10CM:
+        description: ICD-10-CM, the US clinical modification. Anchors expand to billable leaf codes.
+        meaning: infores:icd10cm
+      ICD10:
+        description: WHO ICD-10. Note that placement often differs from ICD-10-CM.
+      ICD11:
+        description: WHO ICD-11.
+      ICD9CM:
+        description: ICD-9-CM, for historical records.
+      SNOMEDCT:
+        description: >-
+          SNOMED CT. Anchors expand through the subsumption hierarchy rather
+          than to billable leaves, so an expansion is larger and is bounded by
+          the edition and release.
+        meaning: infores:snomedct
+      OPCS4:
+        description: OPCS-4 procedure codes, where a disease is ascertained by intervention.
+      READV2:
+        description: Read codes v2, for UK primary care records.
+      CTV3:
+        description: Clinical Terms Version 3, for UK primary care records.
+
+  ValueSetProvenanceEnum:
+    description: >-
+      Where an entry came from. Everything but LOCAL_CURATION is regenerated
+      from Mondo on every build; LOCAL_CURATION survives regeneration. The
+      subject side is always Mondo, whatever the target terminology.
+    permissible_values:
+      MONDO_EXACT_MATCH:
+        description: >-
+          `skos:exactMatch` asserted by Mondo on this disease.
+        meaning: skos:exactMatch
+      MONDO_NARROW_MATCH:
+        description: >-
+          `skos:narrowMatch` asserted by Mondo on this disease. The code denotes
+          a part of the disease, typically because the terminology subdivides it
+          with no code for the whole.
+        meaning: skos:narrowMatch
+      MONDO_DESCENDANT:
+        description: >-
+          Reached through an `is_a` descendant of this disease in Mondo, which
+          carries the mapping itself. A subtype's code is by construction
+          narrower than the disease, so it is always safe. `via_mondo_id` names
+          the descendant.
+      MONDO_BROAD_MATCH:
+        description: >-
+          `skos:broadMatch` asserted by Mondo. The code is broader than the
+          disease, so this can only ever be a PROXY entry.
+        meaning: skos:broadMatch
+      LOCAL_CURATION:
+        description: >-
+          Curated here, because the relationship is a fact about the
+          terminology's structure rather than about the disease and Mondo will
+          not carry it. PROXY entries only.
+
+  ProxyBasisEnum:
+    description: >-
+      Why a proxy code is defensible. Only the last value is genuinely outside
+      what an ontology should assert; the first two are class relationships that
+      belong in Mondo as `skos:broadMatch` and should migrate there.
+    permissible_values:
+      SUBSUMPTION:
+        description: >-
+          The rubric is a genuine superclass of the disease.
+          Beckwith-Wiedemann is an overgrowth syndrome; Aicardi syndrome always
+          has corpus callosum agenesis.
+      TERMINOLOGY_INDEX:
+        description: >-
+          The terminology's own index, inclusion terms or coding guidance assign
+          the disease to this code, so coders were instructed to use it. Higher
+          yield than SUBSUMPTION, because the instruction is what coders
+          followed.
+      CODING_CONVENTION:
+        description: >-
+          An "other specified" or NEC rubric that is a superclass only
+          tautologically. Alstrom syndrome is not a kind of "other specified
+          endocrine disorder"; it is filed at ICD10CM:E34.8 because ICD had
+          nowhere else to put it. Records where a coder puts the patient, not
+          what the code means.
+
+classes:
+
+  ValueSetEntry:
+    description: >-
+      One code in a disease's value set, with the Mondo assertion it came from
+      and the codes a query should actually use.
+    attributes:
+      code:
+        description: >-
+          The anchor code, as Mondo asserts it, as a CURIE in the value set's
+          terminology. May be a non-leaf concept: `ICD10CM:E75.24`,
+          `SNOMEDCT:24700007`. The prefix must match the enclosing value set's
+          `terminology`; that is checked by the build rather than by pattern,
+          because a pattern cannot read a sibling slot.
+        range: uriorcurie
+        identifier: true
+        pattern: '^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$'
+      label:
+        description: The terminology's own label for the anchor code.
+        range: string
+        required: true
+      expanded_codes:
+        description: >-
+          The anchor expanded down the terminology's own hierarchy to the codes
+          a query uses: billable leaves in ICD-10-CM, subsumption descendants in
+          SNOMED CT. One exact match to `ICD10CM:E75.24` yields all seven
+          Niemann-Pick leaves.
+        range: uriorcurie
+        multivalued: true
+      provenance:
+        range: ValueSetProvenanceEnum
+        required: true
+      via_mondo_id:
+        description: >-
+          The Mondo term carrying the assertion, when it is not the disease
+          itself. Set for MONDO_DESCENDANT entries.
+        range: string
+        pattern: '^MONDO:\d{7}$'
+      via_mondo_label:
+        range: string
+
+  ProxyEntry:
+    is_a: ValueSetEntry
+    description: >-
+      A code broader than the disease. Pulling it returns a population the
+      disease is a minority of, so it is a candidate list needing a second
+      filter, never a case definition.
+    attributes:
+      basis:
+        range: ProxyBasisEnum
+        required: true
+      comment:
+        description: >-
+          Why this code, what else is in it, and what a second filter would have
+          to do. Required: an unexplained proxy is indistinguishable from a
+          mistake.
+        range: string
+        required: true
+      approximate_cohort_size:
+        description: >-
+          Observed patient count on this code at a named site, if known. A
+          signal for how much noise a second filter has to remove, not a
+          prevalence estimate.
+        range: integer
+      cohort_size_source:
+        description: Where approximate_cohort_size came from, e.g. "UNC Health via TriNetX, 2026-03".
+        range: string
+      curator:
+        description: Who made this call.
+        range: uriorcurie
+        pattern: '^(ORCID|RDIDAGENT):\S+$'
+      curation_date:
+        range: date
+        slot_uri: dcterms:created
+      upstream_request:
+        description: >-
+          Issue or PR proposing this to Mondo, for SUBSUMPTION and
+          TERMINOLOGY_INDEX entries, which should not stay local.
+        range: uriorcurie
+
+  ExcludedCode:
+    description: A code ruled out of this disease's value set, with the reason.
+    attributes:
+      code:
+        range: uriorcurie
+        identifier: true
+        pattern: '^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$'
+      label:
+        range: string
+      reason:
+        description: Why it does not belong. Stated as a fact about the code, not a preference.
+        range: string
+        required: true
+
+  TerminologyValueSet:
+    description: >-
+      The three tiers for one disease in one terminology. What each returns when
+      you query it:
+
+      `exact` - the disease, no more and no less.
+
+      `narrower` - a subset. Everyone returned has the disease; you miss people.
+      The error is invisible in the data, which is the reason to take the whole
+      subtree rather than cherry-pick leaves.
+
+      `proxy` - a superset. Recall is high, precision is not.
+
+      `exact` and `narrower` are regenerated from Mondo on every build and are
+      not hand-editable. `proxy` is the only curated tier, and even there the
+      SUBSUMPTION and TERMINOLOGY_INDEX entries should migrate to Mondo over
+      time, leaving only CODING_CONVENTION behind.
+    attributes:
+      terminology:
+        description: >-
+          The code system this value set is expressed in. One value set per
+          terminology per disease; the build rejects duplicates, which the
+          schema cannot express while `terminology` is enum-ranged.
+        range: TerminologyEnum
+        required: true
+      exact:
+        description: Codes coextensive with the disease.
+        range: ValueSetEntry
+        multivalued: true
+        inlined_as_list: true
+      narrower:
+        description: >-
+          Codes denoting a part of the disease, from Mondo `narrowMatch` or from
+          a Mondo descendant's own mapping.
+        range: ValueSetEntry
+        multivalued: true
+        inlined_as_list: true
+      proxy:
+        description: >-
+          Codes broader than the disease. Retrieval only. Never union these with
+          `exact` and `narrower` without saying so.
+        range: ProxyEntry
+        multivalued: true
+        inlined_as_list: true
+      excluded:
+        description: >-
+          Codes considered and deliberately rejected, so that "not yet looked
+          at" is distinguishable from "looked at and ruled out".
+          `ICD10CM:D57.3` sickle-cell trait is excluded from sickle cell disease
+          because a carrier state is not the disease.
+        range: ExcludedCode
+        multivalued: true
+        inlined_as_list: true
+      mondo_version:
+        description: Mondo release the derived tiers were built from, e.g. "releases/2026-04-07".
+        range: string
+      terminology_version:
+        description: >-
+          Release of the target terminology the expansion was resolved against:
+          "FY2026" for ICD-10-CM, an edition and release date for SNOMED CT.
+        range: string
+      generated_on:
+        description: When the derived tiers were last regenerated.
+        range: date
