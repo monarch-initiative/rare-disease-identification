@@ -1,0 +1,6 @@
+# Mappings Mondo asserts that we do not trust. SSSOM cannot express a retraction,
+# so they live here and `build_value_sets.py` drops them before building a value set.
+# Every row needs an open issue proposing the fix upstream.
+subject_id	subject_label	predicate_id	object_id	object_label	reason	issue
+MONDO:0011382	sickle cell disease	skos:exactMatch	ICD10CM:D57.2	Sickle-cell/Hb-C disease	D57.2 is Hb-SC disease, a specific compound heterozygous genotype and a Mondo child of this term, not sickle cell disease in general. Leaving it in yields a seven-code value set containing no Hb-SS disease.	issues/mondo/issue_sickle_cell_d572_misplaced.md
+MONDO:0016367	dermatomyositis	skos:exactMatch	ICD10CM:M33	Dermatopolymyositis	M33 subdivides into M33.0x juvenile dermatomyositis, M33.1x other dermatomyositis, M33.2x polymyositis and M33.9x unspecified. Polymyositis is a distinct disease, so M33 is broader than this term and pulls the wrong patients.	issues/mondo/issue_dermatomyositis_m33.md
