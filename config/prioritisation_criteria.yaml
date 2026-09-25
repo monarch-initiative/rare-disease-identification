@@ -47,7 +47,13 @@ narrative:
     Three things a reviewer should push back on first. (1) Criterion 6
     (accessible test) has no direct support anywhere in the registry; every
     signal under it is a proxy and the resulting set is close to saturated, so
-    it carries almost no discriminating information. (2) The curated label
+    it carries almost no discriminating information. The proxies are also this
+    registry's own invention: the manuscript's Methods describe six evidence
+    streams and test accessibility is not one of them, so nothing in the paper
+    sanctions reading "is genetic" or "has an OMIM entry" as evidence that an
+    inexpensive test exists. At 96.8% met and 0% on recorded evidence the
+    criterion currently separates almost nothing, and what little it separates
+    tracks OMIM coverage rather than anything about tests. (2) The curated label
     "Insufficient ICD coding/underdiagnosis" conflates two different criteria --
     the absence of an ICD code is the *negation* of criterion 4b, while
     underdiagnosis is criterion 5 -- and it is assigned here to criterion 5
@@ -418,19 +424,33 @@ criteria:
       the diagnosis. The criterion carries a second purpose beyond feasibility:
       improving utilisation of the medically appropriate test.
     curation_method: >-
-      Expert judgement. The paper names a confirmatory test per condition in its
-      criteria table but reports no structured source for test cost, invasiveness or
-      availability, and this criterion is not among the evidence streams described in
-      its Methods. It is the one criterion of the six with no systematic evidence behind
-      it.
+      Expert judgement, condition by condition. The paper's Methods name six evidence
+      streams -- ICD code coverage, disease prevalence, underdiagnosis risk, treatments,
+      phenotypic breadth, and registries and specialty clinics -- and test accessibility
+      is not one of them. Every other criterion maps onto a described method; this one
+      has none. What the paper gives instead is Table 1: the criterion's rationale plus
+      six worked exemplars, each a clinician's judgement with a citation (alpha-1
+      antitrypsin serum levels, Wilson ceruloplasmin and urinary copper, targeted NGS
+      panels for monogenic dyslipidemias, hypophosphatasia alkaline phosphatase, the
+      Fanconi DEB breakage test, Diamond-Blackfan eADA activity). The four proxies below
+      are therefore this registry's own construction, not a method the paper prescribes.
     coverage_note: >-
       Nothing in the registry records diagnostic-test availability, cost or
       invasiveness. Every signal here infers it from disease class: a Mendelian
       disease presumptively has a sequencing panel, a metabolic or haematological
       disease presumptively has a blood assay. The result covers roughly nine in
       ten diseases and should be read as "no evidence against" rather than as
-      evidence for. Treat this criterion as an open evidence gap; a curated
-      confirmatory-test field would fix it.
+      evidence for. The mismatch is one of granularity: the paper names a specific
+      test per disease, while these signals ask only whether a disease is genetic,
+      has an OMIM entry, or touches metabolism or blood. The last two loosely echo
+      the paper's exemplars; "has an OMIM entry" as evidence of an inexpensive,
+      widely available test is a stretch, and it is what drives the saturation,
+      since nearly every Mendelian disease has one. Note also that the paper's own
+      evidence-gap table (Table 2) lists five gaps -- coding, prevalence, diagnostic
+      rate and delay, treatment and actionability, phenotypic characterisation --
+      and test accessibility is not among them, so the omission is not one the
+      manuscript acknowledges. Treat this criterion as an open evidence gap; a
+      curated confirmatory-test field would fix it.
     satisfied_when: molecular_basis or omim_entry or biochemical_signature or haematological_signature
     display:
       - {field: mondo_category_genetic, render: terms, kind: mondo, label: Genetic basis}
