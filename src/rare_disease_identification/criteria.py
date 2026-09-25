@@ -125,7 +125,7 @@ OPS: dict[str, Callable[[dict, dict], bool]] = {
 # ---------------------------------------------------------------- satisfied_when
 #
 # `satisfied_when` is a boolean expression over the criterion's own signal ids,
-# so a criterion can require a conjunction (criterion 3 does) rather than being
+# so a criterion can require a conjunction (criterion 5 does) rather than being
 # stuck with any-of. Parsed with ast and walked by hand: eval() over a config
 # file is how a data file turns into an execution vector.
 

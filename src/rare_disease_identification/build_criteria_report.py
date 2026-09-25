@@ -30,7 +30,7 @@ TIER_NOTE = {
 
 
 def _lighten(hex_colour: str, amount: float) -> str:
-    """Mix a colour toward white. Criterion 2's navy is invisible on a dark ground."""
+    """Mix a colour toward white. Criterion 1's navy is invisible on a dark ground."""
     r, g, b = (int(hex_colour.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
     mix = lambda c: round(c + (255 - c) * amount)  # noqa: E731
     return f"#{mix(r):02x}{mix(g):02x}{mix(b):02x}"
@@ -405,7 +405,7 @@ def render(spec, payload: dict, icon_dir: Path, figure_dir: Path, fragment: bool
          "appears in exactly one column."),
         ("criteria_upset_direct_evidence",
          "The same diseases and the same criteria, with every inferred signal switched off. "
-         "Criterion 5 empties out completely: nothing in the registry records it."),
+         "Criterion 6 empties out completely: nothing in the registry records it."),
     ):
         path = figure_dir / f"{stem}.png"
         if path.exists():

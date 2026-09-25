@@ -239,7 +239,7 @@ def main(criteria_json: Path, icon_dir: Path, output_dir: Path,
 
     # Same diseases, same criteria, but every `proxy` signal switched off. The
     # difference between the two figures is the size of the inference the first
-    # one rests on -- criterion 5 has no non-proxy signal at all and empties out.
+    # one rests on -- criterion 6 has no non-proxy signal at all and empties out.
     direct, _ = load_membership(payload, "met_direct")
     sub = (
         "The same diseases and the same criteria, counting only evidence the registry actually records:\n"

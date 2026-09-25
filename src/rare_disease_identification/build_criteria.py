@@ -244,7 +244,7 @@ def render_report(spec: CriteriaSpec, payload: dict, source: Path) -> str:
     add("![The same criteria on recorded evidence alone](figures/criteria_upset_direct_evidence.png)")
     add("")
     add(
-        "*The same evaluation with every `proxy` signal switched off. Criterion 5 "
+        "*The same evaluation with every `proxy` signal switched off. Criterion 6 "
         "empties out entirely, which is the clearest statement of the evidence gap "
         "under it.*"
     )
