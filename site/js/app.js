@@ -692,6 +692,18 @@
             rows.join("") + '</div></div></section>';
     }
 
+    // DisMech covers a little over half the list, so this is present-or-absent by
+    // design: no placeholder, no dead link, nothing to explain when a disease has
+    // no mechanism page. Styled as an action rather than as another metadata tag,
+    // because it leaves the site.
+    function renderDismechLink(d) {
+        if (!d.dismech_url) return "";
+        return '<a class="dismech-link" href="' + escAttr(d.dismech_url) + '"' +
+            ' target="_blank" rel="noopener noreferrer"' +
+            ' title="' + escAttr("Disease mechanism narrative for " + d.mondo_label + " on DisMech") + '">' +
+            'DisMech<span class="dismech-arrow" aria-hidden="true">\u2197</span></a>';
+    }
+
     function renderCard(d) {
         var hl = searchQuery ? function (t) { return highlightText(t, searchQuery); } : esc;
         var matched = findMatchedFields(d, searchQuery);
@@ -709,6 +721,7 @@
         html += '<div class="disease-ident">';
         html += '<h3>' + hl(d.mondo_label) + '</h3>';
         html += '<div class="disease-meta">' + renderCurieLink(d.mondo_id);
+        html += renderDismechLink(d);
         if (d.prioritization_category) {
             html += renderTooltipTag(PRIORITIZATION_LABELS[d.prioritization_category] || d.prioritization_category,
                 PRIORITIZATION_TOOLTIPS[d.prioritization_category] || "", "tag " + d.prioritization_category);

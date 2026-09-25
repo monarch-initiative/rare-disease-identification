@@ -17,13 +17,15 @@ just setup              # uv sync + install package in editable mode
 just gen-datamodel      # generate LinkML Python dataclasses from schema
 just build-drugs        # aggregate drug associations from MeDIC products -> data/drugs.yml
 just build-value-sets   # derive exact/narrower ICD-10-CM value sets from Mondo -> data/value_sets.yml
-just merge              # merge curated list + drug + value-set data -> prioritised-rare-disease-list.yml
+just merge              # merge curated list + drug + value-set + DisMech data -> prioritised-rare-disease-list.yml
 just build-criteria     # score every disease against the six criteria -> criteria.json + docs/criteria-assignment.md
 just upset              # upset plot over the six criteria -> docs/figures/
 just criteria-icons     # re-cut the six glyphs from the manuscript workflow figure
-just all                # setup + gen-datamodel + build-drugs + build-value-sets + merge + build-criteria
+just all                # setup + gen-datamodel + build-drugs + build-value-sets + build-functional-capacity + fetch-dismech + merge + build-criteria
 just fetch-mondo        # download tmp/mondo.obo, refreshed whenever the release has moved
 just require-mondo      # assert tmp/mondo.obo exists, no network (used by offline recipes)
+just fetch-dismech      # download tmp/mondo_emc.tsv, refreshed whenever the release has moved
+just require-dismech    # assert tmp/mondo_emc.tsv exists, no network
 just update-categories  # refresh the six mondo_category_* fields, in place, in SOURCE
 just serve              # serve the site locally on port 8080
 just clean              # remove .venv, generated datamodel, output YAML and tmp/
@@ -65,6 +67,22 @@ it finds on the curated side**, so a hand-edited copy is overwritten rather than
 refuses to run if `SOURCE` hand-carries a derived lane; `just strip-derived-evidence` is the
 one-off migration. Quote verification therefore runs against `OUTPUT`, not `SOURCE`.
 
+`fetch-dismech` downloads the DisMech MONDO cross-reference
+(`mondo_emc.tsv`) from the project's `releases/latest/download/` URL, with the same
+ETag conditional GET and the same "never guard on mere existence" reasoning as
+`fetch-mondo`: `latest/download/` silently follows the releases, so a file that is
+present tells you nothing about its age. It refuses to replace a good file with a
+body that lacks the expected header row or has fewer than 100 rows.
+
+The DisMech linkout is the one derived field with no `build-*` step behind it.
+There is nothing to derive - one column looked up by MONDO ID - so `merge` reads
+`tmp/mondo_emc.tsv` directly via `-m` and sets `dismech_url`, rather than a
+`build_dismech.py` writing a YAML that would be a verbatim re-encoding of the
+release asset. It is derived all the same: a `dismech_url` hand-written in
+`SOURCE` is dropped by the join, not trusted. DisMech covers about half the list
+(1,649 of 3,079 as of the September 2026 release); the rest simply carry no slot,
+and the site renders nothing for them.
+
 `build-drugs` expects a sibling `../medic` directory containing `products/indication_list.yaml`, `products/contraindication_list.yaml`, and `products/research_list.yaml`. MeDIC nests one evidence row and one `regulatory_status` per *assertion*; `build_drugs.py` flattens both up to the association and de-duplicates repeated statuses.
 
 ## Architecture
@@ -86,7 +104,7 @@ one-off migration. Quote verification therefore runs against `OUTPUT`, not `SOUR
 - **`scripts/figures/extract_criteria_icons.py`** — cuts the six glyphs out of the workflow
   figure by matching each donut wedge colour exactly. The wedge colours in the criteria config
   are therefore load-bearing.
-- **`src/rare_disease_identification/merge.py`** — joins the curated list with `data/drugs.yml` and `data/value_sets.yml` by MONDO ID. Copies every other source field through untouched. The value-set join is tier-aware: derived tiers come from the generated file, curated tiers from the source.
+- **`src/rare_disease_identification/merge.py`** — joins the curated list with `data/drugs.yml`, `data/value_sets.yml`, `data/functional_capacity.yml` and `tmp/mondo_emc.tsv` by MONDO ID. Copies every other source field through untouched. The value-set join is tier-aware: derived tiers come from the generated file, curated tiers from the source.
 - **`src/rare_disease_identification/update_mondo_categories.py`** — rewrites the six `mondo_category_*` fields by traversing `tmp/mondo.obo`.
 - **`src/rare_disease_identification/datamodel/`** — auto-generated from LinkML schema; do not edit manually.
 - **`scripts/`** — standalone exports (`export_indications_table.py`) and the SSSOM proposal builder (`build_mendelian_sssom.py`). Not part of `just all`. `export_icd10cm_table.py` was removed once `build_value_sets.py` superseded it; its flat `data/icd10cm_table.tsv` had no consumer and carried no predicate tiering.

@@ -1491,6 +1491,37 @@ footer a:hover { text-decoration: underline; }
     margin-top: 0.35rem;
 }
 
+/* The one control in the card head that leaves the site. Filled rather than
+   tinted so it separates from the `.tag` metadata it sits beside -- a tag states
+   a fact about the disease, this one goes somewhere. Navy is page chrome here,
+   not criterion colour, so it carries no criterion meaning. */
+.dismech-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    margin-left: 0.25rem;
+    padding: 0.14rem 0.5rem;
+    border-radius: 4px;
+    background: var(--primary);
+    color: #f3f1ea;
+    font-family: var(--display);
+    font-size: 0.74rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-decoration: none;
+    line-height: 1.5;
+    transition: background 0.12s ease;
+}
+
+.dismech-link:hover,
+.dismech-link:focus-visible {
+    background: var(--c6);
+    color: #ffffff;
+}
+
+.dismech-arrow { font-size: 0.8em; line-height: 1; }
+
 .disease-synonyms {
     margin-top: 0.4rem;
     font-size: 0.82rem;

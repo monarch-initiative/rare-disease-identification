@@ -442,6 +442,13 @@ classes:
         description: Alternative names and terms used to refer to this disease.
         range: string
         multivalued: true
+      dismech_url:
+        description: >-
+          Link to this disease's mechanism narrative on DisMech. Derived: joined
+          by MONDO ID from the dismech release asset `mondo_emc.tsv` at merge
+          time, and not hand-editable - a copy in the curated source is dropped.
+          Absent for diseases DisMech does not cover.
+        range: uri
       work_capacity:
         description: >-
           Curated assessment of whether affected adults of working age can sustain

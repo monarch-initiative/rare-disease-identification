@@ -21,12 +21,14 @@ SUMMARY := "category_summary.yml"
 TMP_DIR := "tmp"
 MONDO_OBO := TMP_DIR / "mondo.obo"
 MONDO_OBO_URL := "https://purl.obolibrary.org/obo/mondo.obo"
+DISMECH_TSV := TMP_DIR / "mondo_emc.tsv"
+DISMECH_TSV_URL := "https://github.com/monarch-initiative/dismech/releases/latest/download/mondo_emc.tsv"
 
 # Default recipe
 default: all
 
 # Full pipeline: build drugs and value sets, merge, score against the six criteria
-all: setup gen-datamodel build-drugs build-value-sets build-functional-capacity merge build-criteria
+all: setup gen-datamodel build-drugs build-value-sets build-functional-capacity fetch-dismech merge build-criteria
 
 # Install Python dependencies via uv
 setup:
@@ -76,6 +78,46 @@ require-mondo:
     set -euo pipefail
     test -s "{{MONDO_OBO}}" || { echo "{{MONDO_OBO}} is missing; run \`just fetch-mondo\`" >&2; exit 1; }
     echo "using {{MONDO_OBO}} ($(grep -m1 '^data-version:' {{MONDO_OBO}}))"
+
+# Download the dismech MONDO cross-reference, refreshing it when the release moved on
+fetch-dismech:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p {{TMP_DIR}}
+    part="{{DISMECH_TSV}}.part"
+    etag="{{DISMECH_TSV}}.etag"
+    # Same conditional GET as fetch-mondo, and for the same reason: never guard on
+    # mere existence. `latest/download/` is a stable URL that silently follows the
+    # releases, so a file that is merely present tells you nothing about its age.
+    args=(-sSL --retry 3 --retry-delay 2 -o "$part" --etag-save "$etag.new")
+    if [ -s "{{DISMECH_TSV}}" ] && [ -s "$etag" ]; then
+        args+=(--etag-compare "$etag")
+    fi
+    code=$(curl "${args[@]}" -w '%{http_code}' "{{DISMECH_TSV_URL}}")
+    if [ "$code" = "304" ]; then
+        rm -f "$part" "$etag.new"
+        echo "mondo_emc.tsv is current ($(($(wc -l < {{DISMECH_TSV}}) - 1)) disorders)"
+        exit 0
+    fi
+    # A 404 page or a truncated body must not replace a good file. The header row
+    # is the cheap structural check; the row floor catches a half-written asset.
+    if [ ! -s "$part" ] \
+       || ! head -1 "$part" | grep -q '^mondo_id	mondo_label	dismech_url' \
+       || [ "$(wc -l < "$part")" -lt 100 ]; then
+        rm -f "$part" "$etag.new"
+        echo "fetch-dismech: download failed or did not look like mondo_emc.tsv (HTTP $code)" >&2
+        exit 1
+    fi
+    mv "$part" "{{DISMECH_TSV}}"
+    mv "$etag.new" "$etag"
+    echo "mondo_emc.tsv updated ($(($(wc -l < {{DISMECH_TSV}}) - 1)) disorders)"
+
+# Assert mondo_emc.tsv is present without touching the network, for offline recipes
+require-dismech:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    test -s "{{DISMECH_TSV}}" || { echo "{{DISMECH_TSV}} is missing; run \`just fetch-dismech\`" >&2; exit 1; }
+    echo "using {{DISMECH_TSV}} ($(($(wc -l < {{DISMECH_TSV}}) - 1)) disorders)"
 
 # Update MONDO category fields via ontology ancestor traversal
 update-categories: fetch-mondo
@@ -131,6 +173,7 @@ merge:
         -d "{{DRUGS}}" \
         -v "{{VALUE_SETS}}" \
         -f "{{FCEVIDENCE}}" \
+        -m "{{DISMECH_TSV}}" \
         -o "{{OUTPUT}}"
 
 # ---------------------------------------------------------------- prioritisation criteria

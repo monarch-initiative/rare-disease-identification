@@ -1,5 +1,5 @@
 # Auto generated from rare_disease_prioritisation.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-09-18T01:11:46
+# Generation date: 2026-09-25T14:23:05
 # Schema: rare_disease_prioritisation
 #
 # id: https://w3id.org/rare-disease-identification
@@ -56,8 +56,8 @@ from rdflib import (
     URIRef
 )
 
-from linkml_runtime.linkml_model.types import Boolean, Date, Float, Integer, String, Uriorcurie
-from linkml_runtime.utils.metamodelcore import Bool, URIorCURIE, XSDDate
+from linkml_runtime.linkml_model.types import Boolean, Date, Float, Integer, String, Uri, Uriorcurie
+from linkml_runtime.utils.metamodelcore import Bool, URI, URIorCURIE, XSDDate
 
 metamodel_version = "1.7.0"
 version = None
@@ -530,6 +530,7 @@ class RareDisease(YAMLRoot):
     mondo_id: Union[str, RareDiseaseMondoId] = None
     mondo_label: str = None
     mondo_synonyms: Optional[Union[str, list[str]]] = empty_list()
+    dismech_url: Optional[Union[str, URI]] = None
     work_capacity: Optional[Union[dict, "FunctionalCapacityAssessment"]] = None
     care_dependence: Optional[Union[dict, "FunctionalCapacityAssessment"]] = None
     hpo_high_level_categories: Optional[Union[dict[Union[str, SimpleTermId], Union[dict, SimpleTerm]], list[Union[dict, SimpleTerm]]]] = empty_dict()
@@ -569,6 +570,9 @@ class RareDisease(YAMLRoot):
         if not isinstance(self.mondo_synonyms, list):
             self.mondo_synonyms = [self.mondo_synonyms] if self.mondo_synonyms is not None else []
         self.mondo_synonyms = [v if isinstance(v, str) else str(v) for v in self.mondo_synonyms]
+
+        if self.dismech_url is not None and not isinstance(self.dismech_url, URI):
+            self.dismech_url = URI(self.dismech_url)
 
         if self.work_capacity is not None and not isinstance(self.work_capacity, FunctionalCapacityAssessment):
             self.work_capacity = FunctionalCapacityAssessment(**as_dict(self.work_capacity))
@@ -1744,6 +1748,9 @@ slots.rareDisease__mondo_label = Slot(uri=RDID.mondo_label, name="rareDisease__m
 
 slots.rareDisease__mondo_synonyms = Slot(uri=RDID.mondo_synonyms, name="rareDisease__mondo_synonyms", curie=RDID.curie('mondo_synonyms'),
                    model_uri=RDID.rareDisease__mondo_synonyms, domain=None, range=Optional[Union[str, list[str]]])
+
+slots.rareDisease__dismech_url = Slot(uri=RDID.dismech_url, name="rareDisease__dismech_url", curie=RDID.curie('dismech_url'),
+                   model_uri=RDID.rareDisease__dismech_url, domain=None, range=Optional[Union[str, URI]])
 
 slots.rareDisease__work_capacity = Slot(uri=RDID.work_capacity, name="rareDisease__work_capacity", curie=RDID.curie('work_capacity'),
                    model_uri=RDID.rareDisease__work_capacity, domain=None, range=Optional[Union[dict, FunctionalCapacityAssessment]])
