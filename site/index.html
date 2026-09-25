@@ -30,14 +30,23 @@
             <div class="header-stats" id="header-stats"></div>
 
             <div class="header-detail">
-                <section class="header-method">
-                    <h2>How this list was built</h2>
-                    <p>All 16,403 rare disease classes in the <a href="https://mondo.monarchinitiative.org">Mondo Disease Ontology</a> were assessed against six prioritisation criteria. How each one was determined:</p>
-                    <!-- Rendered from criteria.json so this list cannot drift from the
-                         six sections on every card below. -->
-                    <ol class="criteria-brief" id="criteria-brief"></ol>
-                    <p>Evidence is thin or absent for several of these, so the final selection of <strong>3,079 diseases</strong> was made by consensus among the clinical and health-informatics experts on the team rather than by a score. Only 140 could be placed with confidence in the higher-prevalence band of roughly 10&ndash;50 per 100,000.</p>
-                </section>
+                <!-- Collapsed by default: the caution beside it is the thing a first-time
+                     reader must not skim past, and this was long enough to bury it. Native
+                     <details> rather than a JS toggle, so it opens without scripting, is
+                     keyboard-operable and survives in-page find. -->
+                <details class="header-method">
+                    <summary>
+                        <h2>How this list was built</h2>
+                        <span class="method-hint">The six criteria, and how 3,079 diseases were chosen from 16,403</span>
+                    </summary>
+                    <div class="method-body">
+                        <p>All 16,403 rare disease classes in the <a href="https://mondo.monarchinitiative.org">Mondo Disease Ontology</a> were assessed against six prioritisation criteria. How each one was determined:</p>
+                        <!-- Rendered from criteria.json so this list cannot drift from the
+                             six sections on every card below. -->
+                        <ol class="criteria-brief" id="criteria-brief"></ol>
+                        <p>Evidence is thin or absent for several of these, so the final selection of <strong>3,079 diseases</strong> was made by consensus among the clinical and health-informatics experts on the team rather than by a score. Only 140 could be placed with confidence in the higher-prevalence band of roughly 10&ndash;50 per 100,000.</p>
+                    </div>
+                </details>
 
                 <aside class="header-caution">
                     <h2>What has not been reviewed</h2>

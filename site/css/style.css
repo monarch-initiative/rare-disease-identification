@@ -1788,6 +1788,55 @@ footer a:hover { text-decoration: underline; }
     line-height: 1.55;
     color: var(--text-muted);
 }
+
+/* Collapsed, this is one clickable row, so it gets a hit area and a caret rather
+   than the default disclosure triangle, which sits on the heading's baseline and
+   reads as a bullet at this size. */
+.header-method > summary {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    cursor: pointer;
+    list-style: none;          /* Firefox */
+    padding: 0.15rem 0;
+    border-radius: var(--radius);
+}
+.header-method > summary::-webkit-details-marker { display: none; }
+.header-method > summary::before {
+    content: "";
+    flex: none;
+    width: 0.42rem;
+    height: 0.42rem;
+    border-right: 2px solid var(--text-muted);
+    border-bottom: 2px solid var(--text-muted);
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+    align-self: center;
+}
+.header-method[open] > summary::before { transform: rotate(45deg); }
+.header-method > summary:hover::before { border-color: var(--primary); }
+.header-method > summary:hover h2 { color: var(--primary); }
+.header-method > summary:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+}
+/* The heading is the summary's own content, so its bottom margin would push the
+   caret off the row. The body below supplies the gap instead. */
+.header-method > summary h2 { margin-bottom: 0; }
+
+/* Says what is behind the caret, so collapsed is still informative. */
+.method-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.method-body { margin-top: 0.5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+    .header-method > summary::before { transition: none; }
+}
+
 .header-method p + p { margin-top: 0.55rem; }
 .header-method strong { font-weight: 600; color: var(--text); }
 .header-method a, .header-caution a { color: var(--primary); }
@@ -1841,6 +1890,14 @@ footer a:hover { text-decoration: underline; }
 .search-band .result-count {
     color: rgba(243,241,234,0.82);
     white-space: nowrap;
+}
+
+/* Collapsed, the left column is one row: holding 1.5fr open for it would strand
+   the caution in a third of the page. Progressive enhancement -- without :has()
+   the two-column layout simply stays, which is the pre-collapse behaviour. */
+.header-detail:has(> .header-method:not([open])) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem;
 }
 
 @media (max-width: 960px) {
