@@ -7,17 +7,17 @@
   {
    "id": "patient_outcomes",
    "number": 1,
-   "label": "Patient outcomes",
+   "label": "Impactful intervention",
    "short_label": "Outcomes",
-   "tagline": "Impactful intervention",
+   "tagline": "Diagnostic delay impact (1a) and indicated management change (1b)",
    "colour": "#1c3b53",
    "icon": "patient_outcomes.png",
    "evidence_status": "curated",
    "evidence_status_label": "Recorded directly by curators for this purpose",
-   "rationale": "The paper counts the negative consequences of not having a correct diagnosis, and the change in care management a correct diagnosis brings, among its most important criteria. 2a: patients face prolonged diagnostic odysseys, and earlier detection through aggregated real-world data can improve outcomes. 2b: the condition is actionable, meaning a diagnosis leads to prescribing a treatment, assessing a cancer risk, referring to a specialist or referring to a trial. Actionability is scoped deliberately. The personal utility of completing the diagnostic odyssey is acknowledged, but what is prioritised is a direct change in medical management that better patient identification would make possible.",
+   "rationale": "The paper counts the negative consequences of not having a correct diagnosis, and the change in care management a correct diagnosis brings, among its most important criteria. 1a: patients face prolonged diagnostic odysseys, and earlier detection through aggregated real-world data can improve outcomes. 1b: the condition is actionable, meaning a diagnosis leads to prescribing a treatment, assessing a cancer risk, referring to a specialist or referring to a trial. Actionability is scoped deliberately. The personal utility of completing the diagnostic odyssey is acknowledged, but what is prioritised is a direct change in medical management that better patient identification would make possible.",
    "curation_method": "Actionability was judged against the ACMG secondary-findings reporting guidance and against conditions rated strong or definitive by the ClinGen Actionability working group, together with the availability of treatment; clinical trials were in some cases identified manually in ClinicalTrials.gov, with systematic evaluation still to come. Treatment availability came from MeDIC, a foundational resource covering diseases, drugs, indications and contraindications, enhanced with additional provenance for this analysis. Diagnostic-delay impact relied on manual literature review and the team's clinical experience, and conditions whose guidelines support the importance of early management were likewise prioritised.",
-   "coverage_note": "Both halves are curated directly, but \"Diagnostic delay impact\" is asserted for 3,052 of 3,079 diseases, so this criterion is effectively true by construction and discriminates almost nothing. The approved-indication signal is the only part of it grounded in external evidence.",
-   "satisfied_when": "diagnostic_delay_flagged or intervention_flagged or approved_indication or high_work_impairment or high_care_impairment",
+   "coverage_note": "Both halves are curated directly, but \"Diagnostic delay impact\" is asserted for 3,052 of 3,079 diseases, so this criterion is effectively true by construction and discriminates almost nothing. The approved-indication signal is the only part of it grounded in external evidence. The functional-capacity assessments (`work_capacity`, `care_dependence`) used to satisfy this criterion as proxies and no longer do: the paper scopes 1a to diagnostic-delay impact and 1b to indicated management change, and disease severity is neither. They are rendered under \"Everything else on record\".",
+   "satisfied_when": "diagnostic_delay_flagged or intervention_flagged or approved_indication",
    "display": [
     {
      "field": "justification_summary",
@@ -26,23 +26,20 @@
       "Diagnostic delay impact",
       "Intervention potential"
      ],
-     "label": "Curated justification"
-    },
-    {
-     "field": "work_capacity",
-     "render": "functional",
-     "label": "Work capacity"
-    },
-    {
-     "field": "care_dependence",
-     "render": "functional",
-     "label": "Care dependence"
+     "label": "Curated justification",
+     "signals": [
+      "diagnostic_delay_flagged",
+      "intervention_flagged"
+     ]
     },
     {
      "field": "indications",
      "render": "drugs",
      "kind": "indications",
-     "label": "Approved indications"
+     "label": "Approved indications",
+     "signals": [
+      "approved_indication"
+     ]
     },
     {
      "field": "contraindications",
@@ -57,7 +54,7 @@
      "label": "Treatment research"
     }
    ],
-   "n_satisfied": 3055,
+   "n_satisfied": 3053,
    "pct_satisfied": 99.2,
    "n_satisfied_direct": 3053,
    "pct_satisfied_direct": 99.2,
@@ -88,33 +85,15 @@
      "description": "MeDIC contributes at least one approved indication, so a diagnosis leads to a prescribable treatment.",
      "field": "indications",
      "n_fired": 232
-    },
-    {
-     "id": "high_work_impairment",
-     "label": "Substantial work impairment",
-     "tier": "proxy",
-     "subcriterion": "1a",
-     "description": "The frailty curation rates work capacity as SUBSTANTIAL or TOTAL. Severity is not the same as delay-sensitivity, but a disease that ends working life is one where a late diagnosis costs more.",
-     "field": "work_capacity.impairment",
-     "n_fired": 86
-    },
-    {
-     "id": "high_care_impairment",
-     "label": "Substantial care dependence",
-     "tier": "proxy",
-     "subcriterion": "1a",
-     "description": "The frailty curation rates care dependence as SUBSTANTIAL or TOTAL.",
-     "field": "care_dependence.impairment",
-     "n_fired": 86
     }
    ]
   },
   {
    "id": "phenotypic_complexity",
    "number": 2,
-   "label": "Phenotypic complexity",
+   "label": "Phenotypic complexity and/or multimodal detectability",
    "short_label": "Complexity",
-   "tagline": "Phenotypic complexity and multimodal detectability",
+   "tagline": "Phenotype signatures with established genomic, imaging or lab-based features",
    "colour": "#e17438",
    "icon": "phenotypic_complexity.png",
    "evidence_status": "mixed",
@@ -131,7 +110,11 @@
       "Phenotypic complexity",
       "Multi-modal detectability"
      ],
-     "label": "Curated justification"
+     "label": "Curated justification",
+     "signals": [
+      "phenotypic_complexity_flagged",
+      "multimodal_flagged"
+     ]
     },
     {
      "field": "hpo_treatment_rank",
@@ -144,7 +127,10 @@
      "render": "terms",
      "kind": "hpo",
      "collapsible": true,
-     "label": "Curated phenotype profile"
+     "label": "Curated phenotype profile",
+     "signals": [
+      "deep_phenotype_profile"
+     ]
     }
    ],
    "n_satisfied": 2901,
@@ -184,9 +170,9 @@
   {
    "id": "progressive_multisystem",
    "number": 3,
-   "label": "Progressive / multisystem",
+   "label": "Progressive / multi-system diseases",
    "short_label": "Multisystem",
-   "tagline": "Progressive, multi-system disease",
+   "tagline": "Pleiotropic features recognisable across medical specialties",
    "colour": "#b13b29",
    "icon": "progressive_multisystem.png",
    "evidence_status": "derived",
@@ -200,7 +186,10 @@
      "field": "hpo_high_level_categories",
      "render": "terms",
      "kind": "hpo",
-     "label": "HPO organ systems"
+     "label": "HPO organ systems",
+     "signals": [
+      "multisystem_phenotype"
+     ]
     },
     {
      "field": "histopheno_categories",
@@ -214,13 +203,20 @@
       "Progressive",
       "Syndromic"
      ],
-     "label": "Course"
+     "label": "Course",
+     "signals": [
+      "progressive_keyword",
+      "syndromic_keyword"
+     ]
     },
     {
      "field": "mondo_category_body_system",
      "render": "terms",
      "kind": "mondo",
-     "label": "Mondo body system"
+     "label": "Mondo body system",
+     "signals": [
+      "syndromic_mondo_class"
+     ]
     }
    ],
    "n_satisfied": 2797,
@@ -269,16 +265,16 @@
   {
    "id": "gold_standard_data",
    "number": 4,
-   "label": "Gold-standard data",
+   "label": "Available gold-standard training cohort",
    "short_label": "Gold standard",
-   "tagline": "Available gold-standard training cohort",
+   "tagline": "A registry or specialty clinic (4a), or an ICD-10-CM code (4b)",
    "colour": "#4593b6",
    "icon": "gold_standard_data.png",
    "evidence_status": "mixed",
    "evidence_status_label": "Part curated or derived, part inferred",
-   "rationale": "The paper's first criterion for inclusion: is there a cohort of confirmed cases to develop and validate against? Registry-enrolled and specialty-clinic patients serve as phenotypic anchors, enabling computable phenotype development and validation that cannot be achieved from coded EHR data alone, where rare disease coding coverage remains critically incomplete (1a). A registry or clinic inside the collaborative also makes raw data collection feasible through existing resources and makes productive engagement with active research and patient communities likely. Failing that, a specific ICD-10-CM code lets a health-system cohort be assembled from coded records instead (1b).",
-   "curation_method": "Registries and specialty clinics were assessed through locus-specific databases, publicly available registries (Global Genes, NORD, RDCRN, CZI, MATRIX) and partner engagement, which quantified the individuals enrolled in shareable registries. Where coding allowed, de-identified EHR queries counted unique patients seen in the past five years by ICD-10-CM or SNOMED CT code, expanding across partner sites as candidate cohorts emerged. Where coding did not allow it, recruitment potential was estimated as 0.2 x total patient population x published prevalence. ICD-10-CM coverage was estimated computationally, comparing Mondo labels and exact synonyms against ICD-10-CM and ICD-11 Foundation codes by BioLORD-2023-C cosine similarity.",
-   "coverage_note": "1b is well supported -- the value-set build derives exact ICD-10-CM matches from Mondo, and Mondo's own xrefs carry ICD-10-CM codes. 1a is not represented at all: no registry, clinic or cohort field exists in the registry. A NORD listing is used as a weak stand-in because NORD runs the IAMRARE registry programme and a NORD entry at least implies an organised patient community, but it is an inference and should be replaced by real partner-network cohort data before this criterion is reported on.",
+   "rationale": "The paper's first criterion for inclusion: is there a cohort of confirmed cases to develop and validate against? Registry-enrolled and specialty-clinic patients serve as phenotypic anchors, enabling computable phenotype development and validation that cannot be achieved from coded EHR data alone, where rare disease coding coverage remains critically incomplete (4a). A registry or clinic inside the collaborative also makes raw data collection feasible through existing resources and makes productive engagement with active research and patient communities likely. Failing that, a specific ICD-10-CM code lets a health-system cohort be assembled from coded records instead (4b).",
+   "curation_method": "Registries and specialty clinics were assessed through locus-specific databases, publicly available registries (Global Genes, NORD, RDCRN, CZI, MATRIX) and partner engagement, which quantified the individuals enrolled in shareable registries. Where coding allowed, de-identified EHR queries counted unique patients seen in the past five years by ICD-10-CM or SNOMED CT code, expanding across partner sites as candidate cohorts emerged. Where coding did not allow it, recruitment potential was estimated as 0.2 x total patient population x published prevalence. ICD-10-CM coverage was estimated computationally, comparing Mondo labels and exact synonyms against ICD-10-CM and ICD-11 Foundation codes by embedding cosine similarity.",
+   "coverage_note": "1b is well supported -- the value-set build derives exact ICD-10-CM matches from Mondo, and Mondo's own xrefs carry ICD-10-CM codes. 1a is not represented at all: no registry, clinic or cohort field exists in the registry. A NORD listing is used as a weak stand-in because NORD runs the IAMRARE registry programme and a NORD entry at least implies an organised patient community, but it is an inference and should be replaced by real partner-network cohort data before this criterion is reported on. Two other coding systems are rendered on the card but deliberately do not satisfy the criterion. ICD-11 Foundation codes are present on 673 diseases and SNOMED CT on 1,198, against 348 for ICD-10-CM, and scoring either would move several hundred diseases into this criterion. The paper does not sanction it: 4b is \"existence of an ICD10CM code\", and while the coding-coverage analysis measured ICD-11 as well (2.7% vs 15% maximum-similarity match), combining ICD-10-CM, ICD-11 and SNOMED CT appears in Table 2 only as the *proposed mitigation for iterative future work*. The partner-site cohort queries the criterion actually rests on used ICD-10-CM or SNOMED CT, and no US site codes in ICD-11 today. Showing the codes without counting them keeps the gap visible without overstating what a cohort can currently be built from.",
    "satisfied_when": "icd10cm_exact_value_set or icd10cm_xref or nord_listed",
    "display": [
     {
@@ -290,19 +286,40 @@
       "proxy",
       "excluded"
      ],
-     "label": "Terminology value set"
+     "label": "Terminology value set",
+     "signals": [
+      "icd10cm_exact_value_set"
+     ]
     },
     {
      "field": "ontology_terminology_codes",
      "render": "codes",
      "filter": "^ICD10CM:",
-     "label": "ICD-10-CM codes"
+     "label": "ICD-10-CM codes",
+     "signals": [
+      "icd10cm_xref"
+     ]
     },
     {
      "field": "ontology_terminology_codes",
      "render": "codes",
      "filter": "^(NORD|GARD|Orphanet|ORDO):",
-     "label": "Patient-facing resources"
+     "label": "Patient-facing resources",
+     "signals": [
+      "nord_listed"
+     ]
+    },
+    {
+     "field": "ontology_terminology_codes",
+     "render": "codes",
+     "filter": "^(icd11f|icd11\\.foundation):",
+     "label": "ICD-11 Foundation (not scored)"
+    },
+    {
+     "field": "ontology_terminology_codes",
+     "render": "codes",
+     "filter": "^SCTID:",
+     "label": "SNOMED CT (not scored)"
     }
    ],
    "n_satisfied": 625,
@@ -342,23 +359,26 @@
   {
    "id": "low_diagnostic_rate",
    "number": 5,
-   "label": "Low diagnostic rate",
+   "label": "Low diagnostic rates for higher prevalence rare diseases",
    "short_label": "Underdiagnosed",
-   "tagline": "Low diagnostic rates for higher-prevalence rare diseases",
+   "tagline": "More undiagnosed patients to reach through computational phenotyping",
    "colour": "#a6b875",
    "icon": "low_diagnostic_rate.png",
    "evidence_status": "curated",
    "evidence_status_label": "Recorded directly by curators for this purpose",
    "rationale": "Second in the team's own ordering: conditions where low diagnostic rates coincide with a prevalence the experts judged relatively high. The argument is one of reach. A higher number of undiagnosed patients means a bigger impact in patient numbers, and real potential for improved recognition through computational phenotyping.",
    "curation_method": "Prevalence came from the literature and from targeted counts of patients at planned recruitment sites, de-identified under the Expert Determination methodology. The probability of escaping detection under current standards of care could not be assessed in an automated fashion, because consistent data on both expected prevalence and diagnostic rates is lacking; manual literature review and expert experience of delayed diagnosis stood in as the proxy. Only 140 of the 3,079 selected diseases could be placed with confidence in the solicitation's higher-prevalence band of roughly 10-50 per 100,000.",
-   "coverage_note": "Unlike the other criteria this one is a conjunction, and deliberately so. The underdiagnosis label alone is asserted for 3,067 of 3,079 diseases and is therefore worthless on its own; the criterion as written in Table 1 is \"low diagnostic rates *for higher prevalence RDs*\", so the prevalence half is required. That makes this the most selective of the six, which matches the manuscript's own finding that only 140 diseases could be confidently placed in the higher-prevalence band.",
+   "coverage_note": "Unlike the other criteria this one is a conjunction, and deliberately so. The underdiagnosis label alone is asserted for 3,067 of 3,079 diseases and is therefore worthless on its own; the criterion as written in Table 1 is \"low diagnostic rates *for higher prevalence RDs*\", so the prevalence half is required. That makes this the most selective of the six, which matches the manuscript's own finding that only 140 diseases could be confidently placed in the higher-prevalence band. Note the conflation in the curated label itself. \"Insufficient ICD coding/underdiagnosis\" packs together the absence of an ICD code, which is the *negation* of criterion 4b, and underdiagnosis, which is this criterion. It is assigned here in full, so a disease flagged only for missing a code counts as evidence of underdiagnosis while failing 4b on the same fact. The fix is to split the label at curation time -- see `issues/issue_justification_summary_enum.md` and `docs/paper_review.md` \u00a77.",
    "satisfied_when": "underdiagnosis_flagged and (higher_prevalence or misdiagnosis_bias_recorded)",
    "display": [
     {
      "field": "prevalence_category",
      "render": "enum",
      "enum": "prevalence",
-     "label": "Prevalence band"
+     "label": "Prevalence band",
+     "signals": [
+      "higher_prevalence"
+     ]
     },
     {
      "field": "prevalence_per_100k_us",
@@ -370,7 +390,10 @@
     {
      "field": "misdiagnosis_bias",
      "render": "text",
-     "label": "Who gets missed"
+     "label": "Who gets missed",
+     "signals": [
+      "misdiagnosis_bias_recorded"
+     ]
     },
     {
      "field": "justification_summary",
@@ -378,7 +401,10 @@
      "values": [
       "Insufficient ICD coding/underdiagnosis"
      ],
-     "label": "Curated justification"
+     "label": "Curated justification",
+     "signals": [
+      "underdiagnosis_flagged"
+     ]
     }
    ],
    "n_satisfied": 154,
@@ -391,7 +417,7 @@
      "label": "Underdiagnosis flagged",
      "tier": "direct",
      "subcriterion": null,
-     "description": "Curators recorded \"Insufficient ICD coding/underdiagnosis\". Note the conflation -- the ICD-coding half of this label belongs to criterion 4b.",
+     "description": "Curators recorded \"Insufficient ICD coding/underdiagnosis\".",
      "field": "justification_summary",
      "n_fired": 3067
     },
@@ -418,9 +444,9 @@
   {
    "id": "accessible_test",
    "number": 6,
-   "label": "Accessible test",
+   "label": "Inexpensive, less invasive, or widely available test",
    "short_label": "Accessible test",
-   "tagline": "Inexpensive, less invasive, or widely available test",
+   "tagline": "Confirmation available after computational identification",
    "colour": "#e6ca5d",
    "icon": "accessible_test.png",
    "evidence_status": "proxy_only",
@@ -434,7 +460,10 @@
      "field": "mondo_category_genetic",
      "render": "terms",
      "kind": "mondo",
-     "label": "Genetic basis"
+     "label": "Genetic basis",
+     "signals": [
+      "molecular_basis"
+     ]
     },
     {
      "field": "mondo_category_molecular",
@@ -446,7 +475,10 @@
      "field": "ontology_terminology_codes",
      "render": "codes",
      "filter": "^OMIM",
-     "label": "OMIM entries"
+     "label": "OMIM entries",
+     "signals": [
+      "omim_entry"
+     ]
     },
     {
      "field": "histopheno_categories",
@@ -455,7 +487,11 @@
       "metabolism_homeostasis",
       "blood"
      ],
-     "label": "Assay-accessible systems"
+     "label": "Assay-accessible systems",
+     "signals": [
+      "biochemical_signature",
+      "haematological_signature"
+     ]
     }
    ],
    "n_satisfied": 2980,
@@ -668,7 +704,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -942,8 +977,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -1353,7 +1386,6 @@
   },
   "MONDO:0011929": {
    "met": [
-    "patient_outcomes",
     "phenotypic_complexity",
     "progressive_multisystem",
     "low_diagnostic_rate",
@@ -1365,8 +1397,6 @@
     "low_diagnostic_rate"
    ],
    "signals": [
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -1644,8 +1674,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -2328,7 +2356,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -3535,7 +3562,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -4668,7 +4694,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -5003,8 +5028,6 @@
    ],
    "signals": [
     "diagnostic_delay_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "deep_phenotype_profile",
     "multisystem_phenotype",
     "syndromic_keyword",
@@ -5117,7 +5140,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -5206,8 +5228,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -5239,8 +5259,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -5383,8 +5401,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -5417,8 +5433,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -5535,8 +5549,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -5561,8 +5573,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -5702,8 +5712,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -5957,8 +5965,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -5986,8 +5992,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -6016,8 +6020,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -6049,8 +6051,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -6160,7 +6160,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -6689,7 +6688,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -6725,8 +6723,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -6795,8 +6791,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -6890,7 +6884,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -6920,8 +6913,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -6981,8 +6972,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -7320,8 +7309,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -7354,8 +7341,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -7781,8 +7766,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -7816,8 +7799,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -8262,7 +8243,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "approved_indication",
-    "high_work_impairment",
     "deep_phenotype_profile",
     "multisystem_phenotype",
     "progressive_keyword",
@@ -9067,8 +9047,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -9458,8 +9436,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -9660,8 +9636,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -9857,8 +9831,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -10173,7 +10145,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -10381,8 +10352,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -10837,8 +10806,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -11001,8 +10968,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -11146,8 +11111,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -11946,8 +11909,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -12025,7 +11986,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -13098,7 +13058,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -13128,8 +13087,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -14728,8 +14685,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -15357,8 +15312,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -15972,8 +15925,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -16445,8 +16396,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -17287,8 +17236,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -17985,8 +17932,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -19303,7 +19248,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -20039,8 +19983,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -21721,8 +21663,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -22398,8 +22338,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -32411,8 +32349,6 @@
    ],
    "signals": [
     "diagnostic_delay_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "deep_phenotype_profile",
     "multisystem_phenotype",
     "nord_listed",
@@ -33480,8 +33416,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -34284,8 +34218,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -34790,8 +34722,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -36056,7 +35986,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -39109,8 +39038,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -39478,8 +39405,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -39648,7 +39573,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -42307,8 +42231,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -48874,8 +48796,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -48979,7 +48899,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -52238,7 +52157,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -52666,8 +52584,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -52877,8 +52793,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -55436,7 +55350,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -57506,8 +57419,6 @@
    ],
    "signals": [
     "diagnostic_delay_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "deep_phenotype_profile",
     "multisystem_phenotype",
     "underdiagnosis_flagged",
@@ -60750,8 +60661,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -61479,8 +61388,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "multisystem_phenotype",
@@ -63138,8 +63045,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -63855,8 +63760,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -64431,8 +64334,6 @@
    ],
    "signals": [
     "diagnostic_delay_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "deep_phenotype_profile",
     "multisystem_phenotype",
     "underdiagnosis_flagged",
@@ -66265,8 +66166,6 @@
    ],
    "signals": [
     "diagnostic_delay_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "deep_phenotype_profile",
     "multisystem_phenotype",
     "syndromic_mondo_class",
@@ -67138,8 +67037,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -69068,8 +68965,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -69843,7 +69738,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -70545,7 +70439,6 @@
     "diagnostic_delay_flagged",
     "intervention_flagged",
     "approved_indication",
-    "high_work_impairment",
     "multimodal_flagged",
     "deep_phenotype_profile",
     "multisystem_phenotype",
@@ -71621,8 +71514,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -71953,8 +71844,6 @@
    ],
    "signals": [
     "diagnostic_delay_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "deep_phenotype_profile",
     "multisystem_phenotype",
     "syndromic_mondo_class",
@@ -72297,8 +72186,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -72355,8 +72242,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -72463,8 +72348,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -73031,7 +72914,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -73291,8 +73173,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -74635,8 +74515,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -74719,8 +74597,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -75095,8 +74971,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -75463,8 +75337,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -75580,8 +75452,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -75608,8 +75478,6 @@
    ],
    "signals": [
     "diagnostic_delay_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "deep_phenotype_profile",
     "multisystem_phenotype",
     "nord_listed",
@@ -75886,8 +75754,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -76380,7 +76246,6 @@
   },
   "MONDO:0019876": {
    "met": [
-    "patient_outcomes",
     "phenotypic_complexity",
     "progressive_multisystem",
     "accessible_test"
@@ -76390,8 +76255,6 @@
     "progressive_multisystem"
    ],
    "signals": [
-    "high_work_impairment",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",
@@ -77056,7 +76919,6 @@
    "signals": [
     "diagnostic_delay_flagged",
     "intervention_flagged",
-    "high_care_impairment",
     "phenotypic_complexity_flagged",
     "multimodal_flagged",
     "deep_phenotype_profile",

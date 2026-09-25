@@ -22,40 +22,38 @@ Three things a reviewer should push back on first. (1) Criterion 6 (accessible t
 
 | # | Criterion | Evidence | Diseases | % | On recorded evidence only |
 |---|-----------|----------|---------:|--:|-------------------------:|
-| 1 | Patient outcomes | curated | 3,055 | 99.2% | 3,053 (99.2%) |
-| 2 | Phenotypic complexity | mixed | 2,901 | 94.2% | 2,901 (94.2%) |
-| 3 | Progressive / multisystem | derived | 2,797 | 90.8% | 2,797 (90.8%) |
-| 4 | Gold-standard data | mixed | 625 | 20.3% | 348 (11.3%) |
-| 5 | Low diagnostic rate | curated | 154 | 5.0% | 154 (5.0%) |
-| 6 | Accessible test | proxy only | 2,980 | 96.8% | 0 (0.0%) |
+| 1 | Impactful intervention | curated | 3,053 | 99.2% | 3,053 (99.2%) |
+| 2 | Phenotypic complexity and/or multimodal detectability | mixed | 2,901 | 94.2% | 2,901 (94.2%) |
+| 3 | Progressive / multi-system diseases | derived | 2,797 | 90.8% | 2,797 (90.8%) |
+| 4 | Available gold-standard training cohort | mixed | 625 | 20.3% | 348 (11.3%) |
+| 5 | Low diagnostic rates for higher prevalence rare diseases | curated | 154 | 5.0% | 154 (5.0%) |
+| 6 | Inexpensive, less invasive, or widely available test | proxy only | 2,980 | 96.8% | 0 (0.0%) |
 
 The last column re-runs each criterion with every `proxy` signal switched off, i.e. counting only what the registry actually records. The gap between the two columns is how much of each criterion is inference.
 
-## 1. Patient outcomes
+## 1. Impactful intervention
 
-*Impactful intervention*
+*Diagnostic delay impact (1a) and indicated management change (1b)*
 
-The paper counts the negative consequences of not having a correct diagnosis, and the change in care management a correct diagnosis brings, among its most important criteria. 2a: patients face prolonged diagnostic odysseys, and earlier detection through aggregated real-world data can improve outcomes. 2b: the condition is actionable, meaning a diagnosis leads to prescribing a treatment, assessing a cancer risk, referring to a specialist or referring to a trial. Actionability is scoped deliberately. The personal utility of completing the diagnostic odyssey is acknowledged, but what is prioritised is a direct change in medical management that better patient identification would make possible.
+The paper counts the negative consequences of not having a correct diagnosis, and the change in care management a correct diagnosis brings, among its most important criteria. 1a: patients face prolonged diagnostic odysseys, and earlier detection through aggregated real-world data can improve outcomes. 1b: the condition is actionable, meaning a diagnosis leads to prescribing a treatment, assessing a cancer risk, referring to a specialist or referring to a trial. Actionability is scoped deliberately. The personal utility of completing the diagnostic odyssey is acknowledged, but what is prioritised is a direct change in medical management that better patient identification would make possible.
 
 **How it was curated.** Actionability was judged against the ACMG secondary-findings reporting guidance and against conditions rated strong or definitive by the ClinGen Actionability working group, together with the availability of treatment; clinical trials were in some cases identified manually in ClinicalTrials.gov, with systematic evaluation still to come. Treatment availability came from MeDIC, a foundational resource covering diseases, drugs, indications and contraindications, enhanced with additional provenance for this analysis. Diagnostic-delay impact relied on manual literature review and the team's clinical experience, and conditions whose guidelines support the importance of early management were likewise prioritised.
 
-**Satisfied when:** `diagnostic_delay_flagged or intervention_flagged or approved_indication or high_work_impairment or high_care_impairment`
+**Satisfied when:** `diagnostic_delay_flagged or intervention_flagged or approved_indication`
 
-**Result:** 3,055 of 3,079 diseases (99.2%); 3,053 (99.2%) on recorded evidence alone, with proxy signals switched off. Evidence status: *curated* &mdash; recorded directly by curators for this purpose.
+**Result:** 3,053 of 3,079 diseases (99.2%); 3,053 (99.2%) on recorded evidence alone, with proxy signals switched off. Evidence status: *curated* &mdash; recorded directly by curators for this purpose.
 
 | Signal | Sub | Tier | Registry field | Fires on | What it means |
 |--------|-----|------|----------------|---------:|---------------|
 | Diagnostic delay impact | 1a | direct | `justification_summary` | 3,052 | Curators recorded "Diagnostic delay impact" in `justification_summary`. |
 | Intervention potential | 1b | direct | `justification_summary` | 2,459 | Curators recorded "Intervention potential" in `justification_summary`. |
 | Approved drug indication | 1b | direct | `indications` | 232 | MeDIC contributes at least one approved indication, so a diagnosis leads to a prescribable treatment. |
-| Substantial work impairment | 1a | proxy | `work_capacity.impairment` | 86 | The frailty curation rates work capacity as SUBSTANTIAL or TOTAL. Severity is not the same as delay-sensitivity, but a disease that ends working life is one where a late diagnosis costs more. |
-| Substantial care dependence | 1a | proxy | `care_dependence.impairment` | 86 | The frailty curation rates care dependence as SUBSTANTIAL or TOTAL. |
 
-> **Coverage.** Both halves are curated directly, but "Diagnostic delay impact" is asserted for 3,052 of 3,079 diseases, so this criterion is effectively true by construction and discriminates almost nothing. The approved-indication signal is the only part of it grounded in external evidence.
+> **Coverage.** Both halves are curated directly, but "Diagnostic delay impact" is asserted for 3,052 of 3,079 diseases, so this criterion is effectively true by construction and discriminates almost nothing. The approved-indication signal is the only part of it grounded in external evidence. The functional-capacity assessments (`work_capacity`, `care_dependence`) used to satisfy this criterion as proxies and no longer do: the paper scopes 1a to diagnostic-delay impact and 1b to indicated management change, and disease severity is neither. They are rendered under "Everything else on record".
 
-## 2. Phenotypic complexity
+## 2. Phenotypic complexity and/or multimodal detectability
 
-*Phenotypic complexity and multimodal detectability*
+*Phenotype signatures with established genomic, imaging or lab-based features*
 
 Last, and framed by what the dataset is for. Because a significant expected downstream use of the combined dataset is as training data for AI models, the team considered whether a condition manifests identifiable signatures across multimodal data amenable to clinical applications and prospective model development. The requirement is that phenotype signatures already exist with established genomic, imaging and/or lab-based features, so that AI models working in the context of general care are realizable.
 
@@ -73,9 +71,9 @@ Last, and framed by what the dataset is for. Because a significant expected down
 
 > **Coverage.** The two curated labels are near-duplicates of each other -- 2,458 diseases carry "Phenotypic complexity" and 2,459 carry "Multi-modal detectability", almost entirely the same diseases -- so they are kept as separate signals but contribute one criterion. Depth of the curated HPO profile is added as a derived signal; it is the only part not reducible to the curators' bulk labelling.
 
-## 3. Progressive / multisystem
+## 3. Progressive / multi-system diseases
 
-*Progressive, multi-system disease*
+*Pleiotropic features recognisable across medical specialties*
 
 The third criterion, and the paper gives three reasons for it. Breadth and depth of phenotype make a diagnostic signal more likely to be recognised in real-world care data, in contrast to the numerous rare diseases with a few common manifestations where no diagnostic AI model is needed: intellectual disability in a paediatric setting already warrants a genomic test. Second, multi-system disease is what primary care and single-specialty care most often miss, which is exactly the context in which model output could provide clinical decision support. Third, multiple manifestations may be targetable by different treatments, relieving some negative outcomes even if only for a subset of signs and symptoms.
 
@@ -94,13 +92,13 @@ The third criterion, and the paper gives three reasons for it. Breadth and depth
 
 > **Coverage.** This is the one criterion computed rather than asserted. The manuscript's own breadth metric (summed mean information content across the 20 HPO organ- system branches) is not stored per disease; the registry keeps only the list of branches touched, so the count of branches is used, with the cut at 5 of 20. That threshold is a judgement call and is the single most reviewable number in this file -- raising it to 7 or lowering it to 3 moves several hundred diseases.
 
-## 4. Gold-standard data
+## 4. Available gold-standard training cohort
 
-*Available gold-standard training cohort*
+*A registry or specialty clinic (4a), or an ICD-10-CM code (4b)*
 
-The paper's first criterion for inclusion: is there a cohort of confirmed cases to develop and validate against? Registry-enrolled and specialty-clinic patients serve as phenotypic anchors, enabling computable phenotype development and validation that cannot be achieved from coded EHR data alone, where rare disease coding coverage remains critically incomplete (1a). A registry or clinic inside the collaborative also makes raw data collection feasible through existing resources and makes productive engagement with active research and patient communities likely. Failing that, a specific ICD-10-CM code lets a health-system cohort be assembled from coded records instead (1b).
+The paper's first criterion for inclusion: is there a cohort of confirmed cases to develop and validate against? Registry-enrolled and specialty-clinic patients serve as phenotypic anchors, enabling computable phenotype development and validation that cannot be achieved from coded EHR data alone, where rare disease coding coverage remains critically incomplete (4a). A registry or clinic inside the collaborative also makes raw data collection feasible through existing resources and makes productive engagement with active research and patient communities likely. Failing that, a specific ICD-10-CM code lets a health-system cohort be assembled from coded records instead (4b).
 
-**How it was curated.** Registries and specialty clinics were assessed through locus-specific databases, publicly available registries (Global Genes, NORD, RDCRN, CZI, MATRIX) and partner engagement, which quantified the individuals enrolled in shareable registries. Where coding allowed, de-identified EHR queries counted unique patients seen in the past five years by ICD-10-CM or SNOMED CT code, expanding across partner sites as candidate cohorts emerged. Where coding did not allow it, recruitment potential was estimated as 0.2 x total patient population x published prevalence. ICD-10-CM coverage was estimated computationally, comparing Mondo labels and exact synonyms against ICD-10-CM and ICD-11 Foundation codes by BioLORD-2023-C cosine similarity.
+**How it was curated.** Registries and specialty clinics were assessed through locus-specific databases, publicly available registries (Global Genes, NORD, RDCRN, CZI, MATRIX) and partner engagement, which quantified the individuals enrolled in shareable registries. Where coding allowed, de-identified EHR queries counted unique patients seen in the past five years by ICD-10-CM or SNOMED CT code, expanding across partner sites as candidate cohorts emerged. Where coding did not allow it, recruitment potential was estimated as 0.2 x total patient population x published prevalence. ICD-10-CM coverage was estimated computationally, comparing Mondo labels and exact synonyms against ICD-10-CM and ICD-11 Foundation codes by embedding cosine similarity.
 
 **Satisfied when:** `icd10cm_exact_value_set or icd10cm_xref or nord_listed`
 
@@ -112,11 +110,11 @@ The paper's first criterion for inclusion: is there a cohort of confirmed cases 
 | ICD-10-CM cross-reference | 4b | direct | `ontology_terminology_codes` | 334 | Mondo carries an ICD10CM cross-reference for the disease. |
 | NORD listing (registry proxy) | 4a | proxy | `ontology_terminology_codes` | 418 | A NORD cross-reference exists. Stands in for "a patient organisation or registry plausibly exists"; it is not evidence of a cohort we can reach. |
 
-> **Coverage.** 1b is well supported -- the value-set build derives exact ICD-10-CM matches from Mondo, and Mondo's own xrefs carry ICD-10-CM codes. 1a is not represented at all: no registry, clinic or cohort field exists in the registry. A NORD listing is used as a weak stand-in because NORD runs the IAMRARE registry programme and a NORD entry at least implies an organised patient community, but it is an inference and should be replaced by real partner-network cohort data before this criterion is reported on.
+> **Coverage.** 1b is well supported -- the value-set build derives exact ICD-10-CM matches from Mondo, and Mondo's own xrefs carry ICD-10-CM codes. 1a is not represented at all: no registry, clinic or cohort field exists in the registry. A NORD listing is used as a weak stand-in because NORD runs the IAMRARE registry programme and a NORD entry at least implies an organised patient community, but it is an inference and should be replaced by real partner-network cohort data before this criterion is reported on. Two other coding systems are rendered on the card but deliberately do not satisfy the criterion. ICD-11 Foundation codes are present on 673 diseases and SNOMED CT on 1,198, against 348 for ICD-10-CM, and scoring either would move several hundred diseases into this criterion. The paper does not sanction it: 4b is "existence of an ICD10CM code", and while the coding-coverage analysis measured ICD-11 as well (2.7% vs 15% maximum-similarity match), combining ICD-10-CM, ICD-11 and SNOMED CT appears in Table 2 only as the *proposed mitigation for iterative future work*. The partner-site cohort queries the criterion actually rests on used ICD-10-CM or SNOMED CT, and no US site codes in ICD-11 today. Showing the codes without counting them keeps the gap visible without overstating what a cohort can currently be built from.
 
-## 5. Low diagnostic rate
+## 5. Low diagnostic rates for higher prevalence rare diseases
 
-*Low diagnostic rates for higher-prevalence rare diseases*
+*More undiagnosed patients to reach through computational phenotyping*
 
 Second in the team's own ordering: conditions where low diagnostic rates coincide with a prevalence the experts judged relatively high. The argument is one of reach. A higher number of undiagnosed patients means a bigger impact in patient numbers, and real potential for improved recognition through computational phenotyping.
 
@@ -128,15 +126,15 @@ Second in the team's own ordering: conditions where low diagnostic rates coincid
 
 | Signal | Sub | Tier | Registry field | Fires on | What it means |
 |--------|-----|------|----------------|---------:|---------------|
-| Underdiagnosis flagged | &mdash; | direct | `justification_summary` | 3,067 | Curators recorded "Insufficient ICD coding/underdiagnosis". Note the conflation -- the ICD-coding half of this label belongs to criterion 4b. |
+| Underdiagnosis flagged | &mdash; | direct | `justification_summary` | 3,067 | Curators recorded "Insufficient ICD coding/underdiagnosis". |
 | Higher-prevalence band | &mdash; | direct | `prevalence_category` | 153 | `prevalence_category` is H, H* or H-uncertain, i.e. the RAPID solicitation's ~10-50/100k band rather than the lower band. |
 | Misdiagnosis bias recorded | &mdash; | direct | `misdiagnosis_bias` | 20 | A demographic or presentation bias driving mis- or under-diagnosis was written down for this disease. |
 
-> **Coverage.** Unlike the other criteria this one is a conjunction, and deliberately so. The underdiagnosis label alone is asserted for 3,067 of 3,079 diseases and is therefore worthless on its own; the criterion as written in Table 1 is "low diagnostic rates *for higher prevalence RDs*", so the prevalence half is required. That makes this the most selective of the six, which matches the manuscript's own finding that only 140 diseases could be confidently placed in the higher-prevalence band.
+> **Coverage.** Unlike the other criteria this one is a conjunction, and deliberately so. The underdiagnosis label alone is asserted for 3,067 of 3,079 diseases and is therefore worthless on its own; the criterion as written in Table 1 is "low diagnostic rates *for higher prevalence RDs*", so the prevalence half is required. That makes this the most selective of the six, which matches the manuscript's own finding that only 140 diseases could be confidently placed in the higher-prevalence band. Note the conflation in the curated label itself. "Insufficient ICD coding/underdiagnosis" packs together the absence of an ICD code, which is the *negation* of criterion 4b, and underdiagnosis, which is this criterion. It is assigned here in full, so a disease flagged only for missing a code counts as evidence of underdiagnosis while failing 4b on the same fact. The fix is to split the label at curation time -- see `issues/issue_justification_summary_enum.md` and `docs/paper_review.md` §7.
 
-## 6. Accessible test
+## 6. Inexpensive, less invasive, or widely available test
 
-*Inexpensive, less invasive, or widely available test*
+*Confirmation available after computational identification*
 
 A computational flag is only useful if the suspected diagnosis can then be confirmed. The paper prioritises conditions for which a readily available diagnostic test exists, its worked example being hypophosphatasia, where a history of fractures together with persistently low alkaline phosphatase points towards the diagnosis. The criterion carries a second purpose beyond feasibility: improving utilisation of the medically appropriate test.
 
@@ -168,7 +166,7 @@ Every other registry field appears somewhere on a disease card: in a criterion's
 | Field | Why it is not criterion evidence |
 |-------|----------------------------------|
 | `prioritization_category` | Records the outcome of the prioritisation (initial vs expanded tier), not evidence going into it. Using it would make the criteria circular. |
-| `hpo_treatment_rank` | Already a composite of criteria 3 and 1b ("HPO + treatment rank" in the workflow figure). Feeding it back into either criterion would double-count. |
+| `hpo_treatment_rank` | Already a composite of criteria 3 and 1b -- it is the "HPO + treatment rank" box in the workflow figure, which feeds expert consensus rather than any one criterion. Feeding it back into either would double-count. |
 | `additional_justification` | Free text with no controlled vocabulary. Present on 427 diseases and frequently restates a justification_summary label already counted. |
 | `mondo_synonyms` | Naming, not evidence. |
 | `contraindications` | A contraindication is a safety fact about a drug, not evidence that diagnosing the disease changes management for the better. |

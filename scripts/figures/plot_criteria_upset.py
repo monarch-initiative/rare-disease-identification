@@ -172,10 +172,19 @@ def draw(frame: pd.DataFrame, criteria: list[dict], title: str, subtitle: str,
                     frameon=False, annotation_clip=False,
                 )
             )
-        ax_labels.text(0.14, row, f"{crit['number']}. {crit['label']}", va="center",
-                       ha="left", fontsize=10, fontweight="bold", color="#2b2b29")
-        ax_labels.text(0.14, row + 0.30, textwrap.shorten(crit["tagline"], 44, placeholder="\u2026"),
-                       va="center", ha="left", fontsize=7.6, color=MUTED)
+        # The criterion names are the paper's own and several run long, so they are
+        # wrapped rather than shortened: overflowing the strip writes them straight
+        # across the dot matrix. The tagline is dropped on a wrapped row so the two
+        # rows of text cannot collide with the neighbouring criterion.
+        name = textwrap.wrap(f"{crit['number']}. {crit['label']}", 38) or [""]
+        for i, line in enumerate(name):
+            ax_labels.text(0.14, row + i * 0.30 - (len(name) - 1) * 0.12, line,
+                           va="center", ha="left", fontsize=9.4,
+                           fontweight="bold", color="#2b2b29")
+        if len(name) == 1:
+            ax_labels.text(0.14, row + 0.30,
+                           textwrap.shorten(crit["tagline"], 44, placeholder="\u2026"),
+                           va="center", ha="left", fontsize=7.6, color=MUTED)
 
     ax_note.text(0.0, 0.46, "How to read this", transform=ax_note.transAxes,
                  ha="left", va="top", fontsize=9.4, fontweight="bold", color="#3a3a38")
