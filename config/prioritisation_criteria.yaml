@@ -14,6 +14,14 @@
 # scripts/figures/extract_criteria_icons.py matches them pixel-exactly to cut the
 # glyphs out of that figure.
 #
+# The NUMBERING, however, is this repo's, not the manuscript's. The figure and
+# Table 1 number the criteria 1..6 in the order gold-standard data, patient
+# outcomes, low diagnostic rate, progressive/multisystem, accessible test,
+# phenotypic complexity; we present them 2,6,4,1,3,5 and renumber accordingly,
+# and the manuscript is being revised to match. Every subcriterion reference in
+# this file (1a, 4b, ...) is therefore in OUR numbering. Do not "fix" it back
+# against the current draft. docs/paper_review.md is the exception and says so.
+#
 # To change an assignment, edit `satisfied_when` or a signal's `rule` here and
 # re-run `just build-criteria`. Do not encode criterion logic anywhere else.
 
@@ -73,17 +81,17 @@ criteria:
 
   - id: patient_outcomes
     number: 1
-    label: Patient outcomes
+    label: Impactful intervention
     short_label: Outcomes
-    tagline: Impactful intervention
+    tagline: Diagnostic delay impact (1a) and indicated management change (1b)
     colour: '#1c3b53'
     icon: patient_outcomes.png
     evidence_status: curated
     rationale: >-
       The paper counts the negative consequences of not having a correct diagnosis, and
       the change in care management a correct diagnosis brings, among its most important
-      criteria. 2a: patients face prolonged diagnostic odysseys, and earlier detection
-      through aggregated real-world data can improve outcomes. 2b: the condition is
+      criteria. 1a: patients face prolonged diagnostic odysseys, and earlier detection
+      through aggregated real-world data can improve outcomes. 1b: the condition is
       actionable, meaning a diagnosis leads to prescribing a treatment, assessing a
       cancer risk, referring to a specialist or referring to a trial. Actionability is
       scoped deliberately. The personal utility of completing the diagnostic odyssey is
@@ -103,15 +111,16 @@ criteria:
       Both halves are curated directly, but "Diagnostic delay impact" is asserted
       for 3,052 of 3,079 diseases, so this criterion is effectively true by
       construction and discriminates almost nothing. The approved-indication
-      signal is the only part of it grounded in external evidence.
+      signal is the only part of it grounded in external evidence. The
+      functional-capacity assessments (`work_capacity`, `care_dependence`) used to
+      satisfy this criterion as proxies and no longer do: the paper scopes 1a to
+      diagnostic-delay impact and 1b to indicated management change, and disease
+      severity is neither. They are rendered under "Everything else on record".
     satisfied_when: >-
       diagnostic_delay_flagged or intervention_flagged or approved_indication
-      or high_work_impairment or high_care_impairment
     display:
-      - {field: justification_summary, render: labels, values: [Diagnostic delay impact, Intervention potential], label: Curated justification}
-      - {field: work_capacity, render: functional, label: Work capacity}
-      - {field: care_dependence, render: functional, label: Care dependence}
-      - {field: indications, render: drugs, kind: indications, label: Approved indications}
+      - {field: justification_summary, render: labels, values: [Diagnostic delay impact, Intervention potential], label: Curated justification, signals: [diagnostic_delay_flagged, intervention_flagged]}
+      - {field: indications, render: drugs, kind: indications, label: Approved indications, signals: [approved_indication]}
       - {field: contraindications, render: drugs, kind: contraindications, label: Contraindications}
       - {field: research, render: drugs, kind: research, label: Treatment research}
     signals:
@@ -135,27 +144,12 @@ criteria:
           MeDIC contributes at least one approved indication, so a diagnosis
           leads to a prescribable treatment.
         rule: {op: present, field: indications}
-      - id: high_work_impairment
-        subcriterion: 1a
-        label: Substantial work impairment
-        tier: proxy
-        description: >-
-          The frailty curation rates work capacity as SUBSTANTIAL or TOTAL. Severity
-          is not the same as delay-sensitivity, but a disease that ends working life
-          is one where a late diagnosis costs more.
-        rule: {op: in, field: work_capacity.impairment, values: [SUBSTANTIAL, TOTAL]}
-      - id: high_care_impairment
-        subcriterion: 1a
-        label: Substantial care dependence
-        tier: proxy
-        description: The frailty curation rates care dependence as SUBSTANTIAL or TOTAL.
-        rule: {op: in, field: care_dependence.impairment, values: [SUBSTANTIAL, TOTAL]}
 
   - id: phenotypic_complexity
     number: 2
-    label: Phenotypic complexity
+    label: Phenotypic complexity and/or multimodal detectability
     short_label: Complexity
-    tagline: Phenotypic complexity and multimodal detectability
+    tagline: Phenotype signatures with established genomic, imaging or lab-based features
     colour: '#e17438'
     icon: phenotypic_complexity.png
     evidence_status: mixed
@@ -182,9 +176,9 @@ criteria:
       labelling.
     satisfied_when: phenotypic_complexity_flagged or multimodal_flagged or deep_phenotype_profile
     display:
-      - {field: justification_summary, render: labels, values: [Phenotypic complexity, Multi-modal detectability], label: Curated justification}
+      - {field: justification_summary, render: labels, values: [Phenotypic complexity, Multi-modal detectability], label: Curated justification, signals: [phenotypic_complexity_flagged, multimodal_flagged]}
       - {field: hpo_treatment_rank, render: number, decimals: 3, label: HPO and treatment rank}
-      - {field: curated_hpo_profiles, render: terms, kind: hpo, collapsible: true, label: Curated phenotype profile}
+      - {field: curated_hpo_profiles, render: terms, kind: hpo, collapsible: true, label: Curated phenotype profile, signals: [deep_phenotype_profile]}
     signals:
       - id: phenotypic_complexity_flagged
         label: Phenotypic complexity
@@ -210,9 +204,9 @@ criteria:
 # nowhere at all -- the failure mode that turns a redesign into silent data loss.
   - id: progressive_multisystem
     number: 3
-    label: Progressive / multisystem
+    label: Progressive / multi-system diseases
     short_label: Multisystem
-    tagline: Progressive, multi-system disease
+    tagline: Pleiotropic features recognisable across medical specialties
     colour: '#b13b29'
     icon: progressive_multisystem.png
     evidence_status: derived
@@ -250,10 +244,10 @@ criteria:
       multisystem_phenotype or progressive_keyword or syndromic_keyword
       or syndromic_mondo_class
     display:
-      - {field: hpo_high_level_categories, render: terms, kind: hpo, label: HPO organ systems}
+      - {field: hpo_high_level_categories, render: terms, kind: hpo, label: HPO organ systems, signals: [multisystem_phenotype]}
       - {field: histopheno_categories, render: strings, label: Tissue and system}
-      - {field: keywords, render: labels, values: [Progressive, Syndromic], label: Course}
-      - {field: mondo_category_body_system, render: terms, kind: mondo, label: Mondo body system}
+      - {field: keywords, render: labels, values: [Progressive, Syndromic], label: Course, signals: [progressive_keyword, syndromic_keyword]}
+      - {field: mondo_category_body_system, render: terms, kind: mondo, label: Mondo body system, signals: [syndromic_mondo_class]}
     signals:
       - id: multisystem_phenotype
         label: Five or more HPO organ systems
@@ -280,9 +274,9 @@ criteria:
 
   - id: gold_standard_data
     number: 4
-    label: Gold-standard data
+    label: Available gold-standard training cohort
     short_label: Gold standard
-    tagline: Available gold-standard training cohort
+    tagline: A registry or specialty clinic (4a), or an ICD-10-CM code (4b)
     colour: '#4593b6'
     icon: gold_standard_data.png
     evidence_status: mixed
@@ -291,11 +285,11 @@ criteria:
       develop and validate against? Registry-enrolled and specialty-clinic patients
       serve as phenotypic anchors, enabling computable phenotype development and
       validation that cannot be achieved from coded EHR data alone, where rare disease
-      coding coverage remains critically incomplete (1a). A registry or clinic inside
+      coding coverage remains critically incomplete (4a). A registry or clinic inside
       the collaborative also makes raw data collection feasible through existing
       resources and makes productive engagement with active research and patient
       communities likely. Failing that, a specific ICD-10-CM code lets a health-system
-      cohort be assembled from coded records instead (1b).
+      cohort be assembled from coded records instead (4b).
     curation_method: >-
       Registries and specialty clinics were assessed through locus-specific databases,
       publicly available registries (Global Genes, NORD, RDCRN, CZI, MATRIX) and partner
@@ -314,14 +308,30 @@ criteria:
       IAMRARE registry programme and a NORD entry at least implies an organised
       patient community, but it is an inference and should be replaced by real
       partner-network cohort data before this criterion is reported on.
+      Two other coding systems are rendered on the card but deliberately do not
+      satisfy the criterion. ICD-11 Foundation codes are present on 673 diseases and
+      SNOMED CT on 1,198, against 348 for ICD-10-CM, and scoring either would move
+      several hundred diseases into this criterion. The paper does not sanction it:
+      4b is "existence of an ICD10CM code", and while the coding-coverage analysis
+      measured ICD-11 as well (2.7% vs 15% maximum-similarity match), combining
+      ICD-10-CM, ICD-11 and SNOMED CT appears in Table 2 only as the *proposed
+      mitigation for iterative future work*. The partner-site cohort queries the
+      criterion actually rests on used ICD-10-CM or SNOMED CT, and no US site codes
+      in ICD-11 today. Showing the codes without counting them keeps the gap visible
+      without overstating what a cohort can currently be built from.
     satisfied_when: icd10cm_exact_value_set or icd10cm_xref or nord_listed
     display:
       # Every tier is shown, not just the one the signal reads: `proxy` and
       # `excluded` are curated and must not disappear from the page because the
       # criterion happens to be scored off `exact` alone.
-      - {field: value_sets, render: value_set, tiers: [exact, narrower, proxy, excluded], label: Terminology value set}
-      - {field: ontology_terminology_codes, render: codes, filter: '^ICD10CM:', label: ICD-10-CM codes}
-      - {field: ontology_terminology_codes, render: codes, filter: '^(NORD|GARD|Orphanet|ORDO):', label: Patient-facing resources}
+      - {field: value_sets, render: value_set, tiers: [exact, narrower, proxy, excluded], label: Terminology value set, signals: [icd10cm_exact_value_set]}
+      - {field: ontology_terminology_codes, render: codes, filter: '^ICD10CM:', label: ICD-10-CM codes, signals: [icd10cm_xref]}
+      - {field: ontology_terminology_codes, render: codes, filter: '^(NORD|GARD|Orphanet|ORDO):', label: Patient-facing resources, signals: [nord_listed]}
+      # Shown, deliberately not scored. See coverage_note: the paper's 4b is an
+      # ICD-10-CM code, and ICD-11 and SNOMED CT appear in Table 2 as the proposed
+      # mitigation for future work, not as the basis this criterion was assessed on.
+      - {field: ontology_terminology_codes, render: codes, filter: '^(icd11f|icd11\.foundation):', label: 'ICD-11 Foundation (not scored)'}
+      - {field: ontology_terminology_codes, render: codes, filter: '^SCTID:', label: 'SNOMED CT (not scored)'}
     signals:
       - id: icd10cm_exact_value_set
         subcriterion: 4b
@@ -348,9 +358,9 @@ criteria:
 
   - id: low_diagnostic_rate
     number: 5
-    label: Low diagnostic rate
+    label: Low diagnostic rates for higher prevalence rare diseases
     short_label: Underdiagnosed
-    tagline: Low diagnostic rates for higher-prevalence rare diseases
+    tagline: More undiagnosed patients to reach through computational phenotyping
     colour: '#a6b875'
     icon: low_diagnostic_rate.png
     evidence_status: curated
@@ -377,21 +387,26 @@ criteria:
       is required. That makes this the most selective of the six, which matches
       the manuscript's own finding that only 140 diseases could be confidently
       placed in the higher-prevalence band.
+      Note the conflation in the curated label itself. "Insufficient ICD
+      coding/underdiagnosis" packs together the absence of an ICD code, which is
+      the *negation* of criterion 4b, and underdiagnosis, which is this criterion.
+      It is assigned here in full, so a disease flagged only for missing a code
+      counts as evidence of underdiagnosis while failing 4b on the same fact. The
+      fix is to split the label at curation time -- see
+      `issues/issue_justification_summary_enum.md` and `docs/paper_review.md` §7.
     satisfied_when: underdiagnosis_flagged and (higher_prevalence or misdiagnosis_bias_recorded)
     display:
-      - {field: prevalence_category, render: enum, enum: prevalence, label: Prevalence band}
+      - {field: prevalence_category, render: enum, enum: prevalence, label: Prevalence band, signals: [higher_prevalence]}
       # Gated: the stored values are proportions despite the field name and several
       # are wrong. The website hides anything carrying this flag until that is fixed.
       - {field: prevalence_per_100k_us, render: number, suffix: ' per 100k', label: US prevalence, requires_flag: show_prevalence}
-      - {field: misdiagnosis_bias, render: text, label: Who gets missed}
-      - {field: justification_summary, render: labels, values: ['Insufficient ICD coding/underdiagnosis'], label: Curated justification}
+      - {field: misdiagnosis_bias, render: text, label: Who gets missed, signals: [misdiagnosis_bias_recorded]}
+      - {field: justification_summary, render: labels, values: ['Insufficient ICD coding/underdiagnosis'], label: Curated justification, signals: [underdiagnosis_flagged]}
     signals:
       - id: underdiagnosis_flagged
         label: Underdiagnosis flagged
         tier: direct
-        description: >-
-          Curators recorded "Insufficient ICD coding/underdiagnosis". Note the
-          conflation -- the ICD-coding half of this label belongs to criterion 4b.
+        description: Curators recorded "Insufficient ICD coding/underdiagnosis".
         rule: {op: contains_any, field: justification_summary, values: [Insufficient ICD coding/underdiagnosis]}
       - id: higher_prevalence
         label: Higher-prevalence band
@@ -410,9 +425,9 @@ criteria:
 
   - id: accessible_test
     number: 6
-    label: Accessible test
+    label: Inexpensive, less invasive, or widely available test
     short_label: Accessible test
-    tagline: Inexpensive, less invasive, or widely available test
+    tagline: Confirmation available after computational identification
     colour: '#e6ca5d'
     icon: accessible_test.png
     evidence_status: proxy_only
@@ -453,10 +468,10 @@ criteria:
       curated confirmatory-test field would fix it.
     satisfied_when: molecular_basis or omim_entry or biochemical_signature or haematological_signature
     display:
-      - {field: mondo_category_genetic, render: terms, kind: mondo, label: Genetic basis}
+      - {field: mondo_category_genetic, render: terms, kind: mondo, label: Genetic basis, signals: [molecular_basis]}
       - {field: mondo_category_molecular, render: terms, kind: mondo, label: Molecular mechanism}
-      - {field: ontology_terminology_codes, render: codes, filter: '^OMIM', label: OMIM entries}
-      - {field: histopheno_categories, render: strings, values: [metabolism_homeostasis, blood], label: Assay-accessible systems}
+      - {field: ontology_terminology_codes, render: codes, filter: '^OMIM', label: OMIM entries, signals: [omim_entry]}
+      - {field: histopheno_categories, render: strings, values: [metabolism_homeostasis, blood], label: Assay-accessible systems, signals: [biochemical_signature, haematological_signature]}
     signals:
       - id: molecular_basis
         label: Known genetic basis
@@ -484,9 +499,12 @@ criteria:
         rule: {op: contains_any, field: histopheno_categories, values: [blood]}
 
 rendered_outside_criteria:
+  - work_capacity
+  - care_dependence
   - mondo_id
   - mondo_label
   - mondo_synonyms
+  - dismech_url
   - keywords
   - prioritization_category
   - ontology_terminology_codes
@@ -513,8 +531,9 @@ unassigned_fields:
       evidence going into it. Using it would make the criteria circular.
   - field: hpo_treatment_rank
     reason: >-
-      Already a composite of criteria 3 and 1b ("HPO + treatment rank" in the
-      workflow figure). Feeding it back into either criterion would double-count.
+      Already a composite of criteria 3 and 1b -- it is the "HPO + treatment rank"
+      box in the workflow figure, which feeds expert consensus rather than any one
+      criterion. Feeding it back into either would double-count.
   - field: additional_justification
     reason: >-
       Free text with no controlled vocabulary. Present on 427 diseases and
