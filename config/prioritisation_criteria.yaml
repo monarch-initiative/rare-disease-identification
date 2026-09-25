@@ -305,7 +305,7 @@ criteria:
       as candidate cohorts emerged. Where coding did not allow it, recruitment potential
       was estimated as 0.2 x total patient population x published prevalence. ICD-10-CM
       coverage was estimated computationally, comparing Mondo labels and exact synonyms
-      against ICD-10-CM and ICD-11 Foundation codes by BioLORD-2023-C cosine similarity.
+      against ICD-10-CM and ICD-11 Foundation codes by embedding cosine similarity.
     coverage_note: >-
       1b is well supported -- the value-set build derives exact ICD-10-CM matches
       from Mondo, and Mondo's own xrefs carry ICD-10-CM codes. 1a is not
