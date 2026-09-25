@@ -466,18 +466,21 @@
                 list.map(function (t) { return renderTermPill(t, item.kind || "mondo"); }).join("") +
                 '</div>';
         },
-        strings: function (d, item) {
+        strings: function (d, item, ctx, suppress) {
             var list = valuesOf(d, item).map(String);
             if (item.values) list = list.filter(function (s) { return item.values.indexOf(s) !== -1; });
+            list = list.filter(function (s) {
+                return !suppress || !suppress.has(s.replace(/_/g, " "));
+            });
             if (list.length === 0) return "";
             return '<div class="category-list">' + list.map(function (s) {
                 return '<span class="category-pill histopheno">' + esc(s.replace(/_/g, " ")) + '</span>';
             }).join("") + '</div>';
         },
-        labels: function (d, item) {
+        labels: function (d, item, ctx, suppress) {
             var list = valuesOf(d, item).map(String).filter(function (s) {
                 return !item.values || item.values.indexOf(s) !== -1;
-            });
+            }).filter(function (s) { return !suppress || !suppress.has(s); });
             if (list.length === 0) return "";
             return '<div class="category-list">' + list.map(function (s) {
                 return '<span class="curated-label">' + esc(s) + '</span>';
@@ -553,11 +556,11 @@
         }
     };
 
-    function renderDisplayField(d, item, diseaseCtx) {
+    function renderDisplayField(d, item, diseaseCtx, suppress) {
         if (item.requires_flag && !DISPLAY_FLAGS[item.requires_flag]) return "";
         var fn = FIELD_RENDERERS[item.render];
         if (!fn) return "";
-        var body = fn(d, item, diseaseCtx);
+        var body = fn(d, item, diseaseCtx, suppress);
         if (!body) return "";
         // Drug sections and functional-capacity blocks carry their own heading.
         if (item.render === "drugs" || item.render === "functional") {
@@ -577,12 +580,33 @@
         return html + '</div>';
     }
 
+    // How a signal's tier reads on the card. The tier was previously carried only
+    // by a CSS treatment, which left "direct" indicated by the absence of a marker.
+    // Visible text of a rendered fragment, for spotting a field that only restates
+    // the signal it fed.
+    function plainText(html) {
+        return String(html).replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&")
+            .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">").replace(/\s+/g, " ").trim();
+    }
+
+    var TIER_WORD = { direct: "recorded", derived: "computed", proxy: "inferred" };
+    var TIER_TIP = {
+        direct: "A curator recorded this field in order to say this.",
+        derived: "Computed from structured registry data.",
+        proxy: "The field says something adjacent; this reads across a gap."
+    };
+
+    // One criterion section, organised around the question the card exists to
+    // answer: why does this disease meet this criterion, and on what? Each fired
+    // signal owns the registry field it read, so a value is printed once, beside
+    // the rule that used it, rather than twice in two unrelated blocks.
     function renderCriterionSection(d, c, assignment, diseaseCtx) {
         var met = assignment.met.indexOf(c.id) !== -1;
         var direct = assignment.met_direct.indexOf(c.id) !== -1;
         var fired = new Set(assignment.signals);
 
-        var verdict = met ? (direct ? "Met" : "Met on proxy evidence") : "Not met";
+        var verdict = met ? (direct ? "Met" : "Met on inferred evidence") : "Not met";
         var verdictTip = met
             ? (direct
                 ? "At least one signal the registry records directly holds for this disease."
@@ -602,30 +626,101 @@
         html += withTip('<span class="criterion-verdict">' + esc(verdict) + '</span>', verdictTip);
         html += '</div>';
 
+        var signalLabel = {};
+        (c.signals || []).forEach(function (s) { signalLabel[s.id] = s.label; });
+
+        // Some curated values are the signal restated: the rule fires on
+        // `justification_summary` containing "Diagnostic delay impact", the signal is
+        // labelled "Diagnostic delay impact", and the field then renders that same
+        // string as a chip. Printing it under the claim it produced adds a line and no
+        // information, so every chip that only echoes a fired signal of this criterion
+        // is suppressed before the field renders -- and a field left with no chips at
+        // all drops out on its own. The trailing parenthetical on labels like
+        // "Syndromic (keyword)" disambiguates two signals for the reader, not the value.
+        var restated = new Set();
+        (c.signals || []).forEach(function (s) {
+            if (!fired.has(s.id)) return;
+            restated.add(s.label);
+            restated.add(s.label.replace(/\s*\([^)]*\)\s*$/, ""));
+        });
+
+        // Render every display field once, then hand each to the first fired signal
+        // it is evidence for. Whatever is left is context, not warrant.
+        var rendered = (c.display || []).map(function (item) {
+            var owns = (item.signals || []).some(function (s) { return fired.has(s); });
+            return { item: item, html: renderDisplayField(d, item, diseaseCtx, owns ? restated : null) };
+        }).filter(function (r) { return r.html; });
+
+        var claimedBy = {};
+        var leftover = [];
+        rendered.forEach(function (r) {
+            var owner = (r.item.signals || []).filter(function (s) { return fired.has(s); })[0];
+            if (!owner) { leftover.push(r); return; }
+            if (plainText(r.html) === plainText(r.item.label) + " " + signalLabel[owner] ||
+                plainText(r.html) === signalLabel[owner]) { return; }
+            (claimedBy[owner] = claimedBy[owner] || []).push(r.html);
+        });
+
         var signals = (c.signals || []).filter(function (s) { return fired.has(s.id); });
+        // A criterion can have signals fire and still not be met: criterion 5 requires
+        // a conjunction. Heading the rows "why this was met" in that case would assert
+        // the opposite of the verdict three lines above it.
         if (signals.length > 0) {
-            html += '<div class="criterion-signals">';
+            var head = met ? "Why this was met"
+                           : "Evidence found, but not enough to meet this criterion";
+            html += '<div class="evidence' + (met ? '' : ' short') + '">' +
+                '<h5 class="evidence-head">' + head + '</h5>';
+            // Where every signal is an inference, say so once at the top rather than
+            // leaving the reader to notice six dashed borders.
+            if (c.evidence_status === "proxy_only") {
+                html += '<p class="proxy-banner">Nothing in the registry records this ' +
+                    'criterion directly. Every line below infers it from a field that ' +
+                    'says something adjacent.</p>';
+            }
             signals.forEach(function (s) {
-                html += withTip('<span class="signal-chip ' + s.tier + '">' + esc(s.label) + '</span>',
-                    s.description + " (" + s.tier + " evidence)");
+                var word = TIER_WORD[s.tier] || s.tier;
+                html += '<div class="evidence-row ' + s.tier + '">';
+                html += '<div class="evidence-claim">' + esc(s.label) +
+                    withTip('<span class="tier-badge ' + s.tier + '">' + esc(word) + '</span>',
+                            TIER_TIP[s.tier] || "") + '</div>';
+                // A proxy is a step from something recorded to something concluded.
+                // Drawn as those two steps, so the size of the gap is visible instead
+                // of being buried in a sentence.
+                if (s.tier === "proxy") {
+                    if (claimedBy[s.id]) {
+                        html += '<div class="infer-step"><span class="infer-tag">Recorded</span>' +
+                            '<div class="infer-body">' + claimedBy[s.id].join("") + '</div></div>';
+                    }
+                    if (s.description) {
+                        html += '<div class="infer-step infer-to"><span class="infer-tag">Inferred</span>' +
+                            '<div class="infer-body"><p class="evidence-why">' +
+                            esc(s.description) + '</p></div></div>';
+                    }
+                } else {
+                    if (s.description) {
+                        html += '<p class="evidence-why">' + esc(s.description) + '</p>';
+                    }
+                    if (claimedBy[s.id]) {
+                        html += '<div class="evidence-fields">' + claimedBy[s.id].join("") + '</div>';
+                    }
+                }
+                html += '</div>';
             });
             html += '</div>';
+        } else {
+            html += '<p class="criterion-empty">Nothing in the registry speaks to this criterion for this disease.</p>';
         }
-
-        var rendered = (c.display || []).map(function (item) {
-            return { item: item, html: renderDisplayField(d, item, diseaseCtx) };
-        }).filter(function (r) { return r.html; });
 
         // Carried over from the old functional-capacity section: these assessments are
         // agent-curated and clinically unreviewed, and must never appear without saying so.
         var hasFunctional = rendered.some(function (r) { return r.item.render === "functional"; });
-        var fields = (hasFunctional ? FC_DISCLAIMER : "") +
-            rendered.map(function (r) { return r.html; }).join("");
+        if (hasFunctional) {
+            html = html.replace('<div class="evidence">', '<div class="evidence">' + FC_DISCLAIMER);
+        }
 
-        if (fields) {
-            html += '<div class="criterion-fields">' + fields + '</div>';
-        } else {
-            html += '<p class="criterion-empty">Nothing recorded for this criterion.</p>';
+        if (leftover.length > 0) {
+            html += '<div class="context"><h5 class="context-head">Also on record</h5>' +
+                leftover.map(function (r) { return r.html; }).join("") + '</div>';
         }
 
         html += '</div></section>';
@@ -673,6 +768,16 @@
                 p[1].map(function (t) { return renderTermPill(t, "mondo"); }).join("") +
                 '</div></div></div>');
         });
+        // The functional-capacity assessments belong to no criterion: the paper scopes
+        // "Impactful intervention" to diagnostic delay and management change, and disease
+        // severity is neither. They stay on the card as context, and the disclaimer travels
+        // with them -- these are agent-curated and clinically unreviewed wherever they appear.
+        var fc = FC_AXES.filter(function (p) { return d[p[0]]; });
+        if (fc.length > 0) {
+            rows.push('<div class="criterion-block">' + FC_DISCLAIMER +
+                fc.map(function (p) { return renderFcAssessment(p[0], p[1], p[2], d[p[0]]); }).join("") +
+                '</div>');
+        }
         if (d.additional_justification) {
             rows.push('<div class="criterion-field"><div class="field-label">Curator note</div>' +
                 '<div class="field-value"><p class="field-text">' +

@@ -1653,6 +1653,89 @@ footer a:hover { text-decoration: underline; }
 }
 .signal-chip.proxy::after { content: " · inferred"; opacity: 0.65; }
 
+/* ---- criterion evidence ----------------------------------------------------
+   The card answers one question: why does this disease meet this criterion, and
+   on what. The warrant used to live in hover tooltips, which put it out of reach
+   on touch and made "direct" readable only as the absence of a marker. It is
+   plain text now, and the tier is a word. */
+
+.evidence { margin: 0.7rem 0 0 2.6rem; }
+.evidence-head, .context-head {
+    font-size: 0.68rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 0.45rem;
+}
+/* Signals fired but the criterion still failed: the rows are context, not proof. */
+.evidence.short .evidence-head { color: var(--text-muted); text-transform: none;
+    letter-spacing: 0; font-size: 0.74rem; font-style: italic; }
+
+.evidence-row {
+    border-left: 2px solid color-mix(in srgb, var(--c) 45%, transparent);
+    padding: 0 0 0 0.7rem;
+    margin-bottom: 0.7rem;
+}
+.evidence-row:last-child { margin-bottom: 0; }
+.evidence-row.proxy { border-left-style: dotted; }
+
+.evidence-claim {
+    display: flex; align-items: baseline; gap: 0.45rem; flex-wrap: wrap;
+    font-size: 0.83rem; font-weight: 600; color: var(--text);
+}
+.tier-badge {
+    font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase;
+    font-weight: 600; padding: 0.04rem 0.32rem; border-radius: 2px;
+    background: color-mix(in srgb, var(--c) 16%, #fff);
+    color: color-mix(in srgb, var(--c) 78%, #000);
+    border: 1px solid color-mix(in srgb, var(--c) 30%, #fff);
+    cursor: help;
+}
+.tier-badge.proxy {
+    background: transparent; border-style: dashed; color: var(--text-muted);
+}
+.evidence-why {
+    font-size: 0.79rem; line-height: 1.45; color: var(--text-muted);
+    margin: 0.2rem 0 0;
+}
+.evidence-fields { margin-top: 0.35rem; }
+
+/* A proxy is a step from something recorded to something concluded. Drawing the
+   two steps makes the size of that step visible at a glance. */
+.proxy-banner {
+    font-size: 0.78rem; line-height: 1.45; color: var(--text-muted);
+    background: color-mix(in srgb, var(--c) 7%, transparent);
+    border-left: 2px dotted color-mix(in srgb, var(--c) 45%, transparent);
+    padding: 0.4rem 0.6rem; margin: 0 0 0.6rem;
+}
+.infer-step { display: grid; grid-template-columns: 4.6rem 1fr; gap: 0.5rem;
+    align-items: baseline; margin-top: 0.3rem; }
+.infer-tag {
+    font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-muted); font-weight: 600; text-align: right;
+}
+.infer-to .infer-tag { color: color-mix(in srgb, var(--c) 75%, #000); }
+.infer-to { position: relative; }
+.infer-to::before {
+    content: "\2193";
+    position: absolute; left: 3.1rem; top: -0.55rem;
+    font-size: 0.7rem; color: var(--text-muted);
+}
+.infer-body { min-width: 0; }
+.infer-body .criterion-field { margin-bottom: 0; }
+.infer-body .field-label { display: none; }
+
+.context { margin: 0.8rem 0 0 2.6rem; padding-top: 0.6rem;
+    border-top: 1px solid var(--border); }
+
+@media (max-width: 720px) {
+    .evidence, .context { margin-left: 0; }
+    .infer-step { grid-template-columns: 1fr; gap: 0.1rem; }
+    .infer-tag { text-align: left; }
+    .infer-to::before { display: none; }
+}
+
 .criterion-fields { margin: 0.6rem 0 0 2.6rem; }
 
 .criterion-field { margin-bottom: 0.5rem; }
